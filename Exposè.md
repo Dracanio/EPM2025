@@ -26,15 +26,14 @@ Hauptfunktionen:
 - Teilnahmefunktion und Integration in persönliche Kalender
 - Intelligente Suche nach Personen, Gruppen und Events
 
-optionale Features:
+Optionale Features:
 - Gemeinsame Dateiablage (z. B. Lernmaterialien, Protokolle, etc.)
 - Echtzeit-Benachrichtigungen für neue Beiträge, Einladungen oder Nachrichten
 - Admin-Dashboard für Moderation, Nutzerverwaltung und Content-Kontrolle
 - Mobile Progressive Web App (PWA) für Zugriff unterwegs
 - Campus-Marktplatz zum Austausch von Wohnungen, Büchern oder Gegenständen
 
-Technische Umsetzung ????
-- 
+Technische Umsetzung ??
 
 User Stories
 - Als Nutzer möchte ich mich schnell und einfach einloggen können, um jederzeit auf meine Inhalte zuzugreifen.
