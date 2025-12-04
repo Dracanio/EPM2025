@@ -2,7 +2,7 @@
 </script>
 
 <template>
-  <div class="min-h-screen bg-slate-100">
+  <div class="min-h-screen bg-slate-100 flex flex-col">
     <header class="border-b border-slate-200 bg-white">
       <div class="mx-auto flex max-w-5xl items-center justify-between px-4 py-3">
         <div class="flex items-center gap-2">
@@ -24,11 +24,18 @@
           >
             Polotno-Test
           </RouterLink>
+          <RouterLink
+            to="/poster-designer"
+            class="rounded-lg px-3 py-1.5"
+            active-class="bg-primary-600 text-white"
+          >
+            Poster Designer TH Köln
+          </RouterLink>
         </nav>
       </div>
     </header>
 
-    <main class="mx-auto max-w-5xl px-4 py-6">
+    <main class="flex-1 flex flex-col" style="position: relative;">
       <RouterView />
     </main>
   </div>

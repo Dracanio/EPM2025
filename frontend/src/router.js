@@ -6,6 +6,7 @@ const routes = [
   { path: '/', redirect: '/ce-test' },
   { path: '/ce-test', component: CeTestView },
   { path: '/polotno-test', component: PolotnoTestView },
+  { path: '/poster-designer', component: () => import('./views/PosterDesignerView.vue') },
 ]
 
 export const router = createRouter({
