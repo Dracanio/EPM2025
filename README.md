@@ -12,6 +12,6 @@ Changelog
 
 - 29.10 added marked reaserch to the [Poster Planer Exposè](/Docs/Exposé-PosterDesigner.md)
 
-- 17.11 added ADRs and SDK tests
+- 17.11 added [ADRs](/Docs/ADR) and SDK tests
 
-- 20.11 added Class diagramm
+- 20.11 added [Class diagramm](/Docs/ClassDiagrammV1.jpg)
