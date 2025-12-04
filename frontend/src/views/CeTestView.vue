@@ -10,24 +10,24 @@ onMounted(async () => {
   const license = import.meta.env.VITE_CESDK_LICENSE || ''
   if (!license) {
     error.value =
-      'Bitte einen kostenlosen CE-Lizenz-String im Account holen und als VITE_CESDK_LICENSE in .env eintragen.'
+      'lizenz fehlt'
     return
   }
 
   try {
+    //die magie faengt hier an
     instance = await CreativeEditorSDK.create(container.value, {
       license,
       ui: {
         theme: 'light',
       },
     })
-    // einfache leere Szene anlegen, sonst bleibt der Editor ohne Inhalt
     if (typeof instance.createDesignScene === 'function') {
       await instance.createDesignScene()
     }
   } catch (e) {
     console.error(e)
-    error.value = 'CE-SDK konnte mit der Lizenz nicht geladen werden. Details in der Konsole.'
+    error.value = 'CE-SDK konnte mit der Lizenz nicht geladen werden.'
   }
 })
 
