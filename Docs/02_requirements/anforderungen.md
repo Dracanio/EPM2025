@@ -18,10 +18,10 @@
 | F12 | Undo/Redo |  | Änderungen rückgängig machen / wiederherstellen | Hoch |
 | F13 | Zoomfunktion |  | Inhalte vergrößern/verkleinern | Mittel |
 | F14 | Template-Kategorien |  | Kategorien für Event, Forschung, Projekt, Kick-off etc. | Mittel |
-| F15 | Suchfunktion für Vorlagen/Bilder | Primär | Schnelles Finden von passenden Vorlagen oder Bildern | Mittel |
-| F16 | Mehrsprachigkeit | Sekundär | Optional Deutsch/Englisch | Niedrig |
-| F17 | Versionierung | Sekundär | Historie von Poster-Entwürfen | Mittel |
-| F18 | Integration externer Tools | Tertiär | Optional: Schnittstellen zu Grafikgeneratoren (DALL-E, Midjourney) | Niedrig |
+| F15 | Suchfunktion für Vorlagen/Bilder |  | Schnelles Finden von passenden Vorlagen oder Bildern | Mittel |
+| F16 | Mehrsprachigkeit |  | Optional Deutsch/Englisch | Niedrig |
+| F17 | Versionierung |  | Historie von Poster-Entwürfen | Mittel |
+| F18 | Integration externer Tools |  | Optional: Schnittstellen zu Grafikgeneratoren (DALL-E, Midjourney) | Niedrig |
 
 ---
 
