@@ -4,15 +4,24 @@
 
 | ID  | Anforderung | Stakeholder | Beschreibung | Priorität |
 |-----|------------|------------|--------------|-----------|
-| F1  | Poster erstellen |  | Nutzer sollen Poster basierend auf Vorlagen erstellen können | Hoch |
-| F2  | Vorlagenbibliothek |  | Bereitstellung hochschulspezifischer Vorlagen für verschiedene Anlässe (Events, Projekte, Präsentationen) | Hoch |
-| F3  | Style Guide Integration |  | Automatische Einhaltung der Corporate Identity der Hochschule | Hoch |
-| F4  | Exportfunktion |  | Poster als PDF oder Bild exportieren, um z. B. per E-Mail oder Slack weiterzugeben | Hoch |
-| F5  | Kollaboration |  | Kommentare und Feedback zwischen Studierenden und Lehrenden | Mittel |
-| F6  | Poster duplizieren |  | Vorhandene Poster als Vorlage für neue Projekte wiederverwenden | Mittel |
-| F7  | Bildpool / Mediendatenbank |  | Zugriff auf Hochschul- oder fachspezifische Bilder, rechtlich abgesichert | Mittel |
-| F8  | Einfaches Interface |  | Intuitive Bedienung, auch für wenig technikaffine Nutzer | Hoch |
-| F9  | Touch-Device-Unterstützung | Primär (Anna) | Funktion auf iPads, evtl. Tablets, ohne Einschränkungen | Mittel |
+| F01 | Poster erstellen |  | Nutzer sollen Poster basierend auf Vorlagen erstellen können | Hoch |
+| F02 | Vorlagenbibliothek |  | Bereitstellung hochschulspezifischer Vorlagen für verschiedene Anlässe (Events, Projekte, Präsentationen) | Hoch |
+| F03 | Style Guide Integration |  | Automatische Einhaltung der Corporate Identity der Hochschule | Hoch |
+| F04 | Exportfunktion |  | Poster als PDF oder Bild exportieren, um z. B. per E-Mail oder Slack weiterzugeben | Hoch |
+| F05 | Kollaboration |  | Kommentare und Feedback zwischen Studierenden und Lehrenden | Mittel |
+| F06 | Poster duplizieren |  | Vorhandene Poster als Vorlage für neue Projekte wiederverwenden | Mittel |
+| F07 | Bildpool / Mediendatenbank |  | Zugriff auf Hochschul- oder fachspezifische Bilder, rechtlich abgesichert | Mittel |
+| F08 | Einfaches Interface |  | Intuitive Bedienung, auch für wenig technikaffine Nutzer | Hoch |
+| F09 | Touch-Device-Unterstützung | Anna | Funktion auf iPads, evtl. Tablets, ohne Einschränkungen | Mittel |
+| F10 | Farbpalette / CI-Farben |  | Automatische Vorschläge und Beschränkung auf Hochschul-CI | Hoch |
+| F11 | Raster & Lineale |  | Präzises Ausrichten von Elementen | Mittel |
+| F12 | Undo/Redo |  | Änderungen rückgängig machen / wiederherstellen | Hoch |
+| F13 | Zoomfunktion |  | Inhalte vergrößern/verkleinern | Mittel |
+| F14 | Template-Kategorien |  | Kategorien für Event, Forschung, Projekt, Kick-off etc. | Mittel |
+| F15 | Suchfunktion für Vorlagen/Bilder | Primär | Schnelles Finden von passenden Vorlagen oder Bildern | Mittel |
+| F16 | Mehrsprachigkeit | Sekundär | Optional Deutsch/Englisch | Niedrig |
+| F17 | Versionierung | Sekundär | Historie von Poster-Entwürfen | Mittel |
+| F18 | Integration externer Tools | Tertiär | Optional: Schnittstellen zu Grafikgeneratoren (DALL-E, Midjourney) | Niedrig |
 
 ---
 
@@ -25,6 +34,7 @@
 | NF3 | Performance | Schnelle Ladezeiten, auch bei großen Poster-Dateien | Mittel |
 | NF4 | Geräteunterstützung | Desktop und Tablet (iPad), Smartphone optional (eher nicht) | Mittel |
 | NF5 | Barrierefreiheit | Grundlegende Zugänglichkeit für alle Nutzergruppen | Mittel |
+| NF6 | Sicherheit | Schutz gegen unbefugten Zugriff, Bild- und Vorlagenrechte | Hoch |
 
 ---
 
