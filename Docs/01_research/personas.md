@@ -16,7 +16,7 @@ Diese Personas repräsentieren typische Nutzer und Stakeholder des Poster Design
 
 ### Ziele
 - Schnell ein professionell aussehendes Poster erzeugen, das CI-konform ist.  
-- Nicht viel Zeit in Design investieren — Ergebnis muss gut druckbar sein.  
+- Nicht viel Zeit in Design investieren, Ergebnis muss gut druckbar sein.  
 - Poster als PDF/PNG exportieren und mit Partnern teilen.
 
 ### Pain Points
