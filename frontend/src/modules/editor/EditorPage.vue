@@ -1,6 +1,16 @@
 <script setup lang="ts">
+import { onMounted } from 'vue'
 import Sidebar from './Sidebar.vue'
 import PosterCanvas from './PosterCanvas.vue'
+import { useEditorStore } from '@/core/store/useEditorStore'
+
+const store = useEditorStore()
+
+onMounted(() => {
+  if (!store.activePoster) {
+    store.initPoster('A4')
+  }
+})
 </script>
 
 <template>
