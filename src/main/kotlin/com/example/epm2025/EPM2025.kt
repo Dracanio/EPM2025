@@ -1,4 +1,4 @@
-package com.example.EPM2025
+package com.example.epm2025
 
 import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication

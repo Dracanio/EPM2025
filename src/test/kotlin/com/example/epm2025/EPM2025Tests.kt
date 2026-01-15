@@ -1,4 +1,4 @@
-package com.example.EPM2025
+package com.example.epm2025
 
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest
