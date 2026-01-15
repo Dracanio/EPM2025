@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poster Editor</title>
+    <!-- Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="style.css">
+    <style id="dynamic-print-style"></style>
+</head>
+<body class="bg-light">
+    <div class="container-fluid vh-100 d-flex flex-column overflow-hidden p-0">
+        <div class="row flex-grow-1 g-0 h-100">
+            <!-- Sidebar -->
+            <aside class="col-md-4 col-lg-3 bg-white border-end d-flex flex-column h-100 shadow-sm z-1">
+                <div class="p-3 border-bottom">
+                    <h1 class="h4 mb-3 text-primary"><i class="bi bi-easel2-fill me-2"></i>Poster Editor</h1>
+                    
+                    <div class="d-grid gap-2">
+                        <select id="format-select" class="form-select mb-2">
+                            <option value="a4-p">A4 Hochformat</option>
+                            <option value="a4-l">A4 Querformat</option>
+                        </select>
+                        
+                        <div class="btn-group" role="group">
+                            <button id="add-text-btn" class="btn btn-primary"><i class="bi bi-fonts me-1"></i> Text</button>
+                            <button id="add-image-btn" class="btn btn-primary"><i class="bi bi-image me-1"></i> Bild</button>
+                        </div>
+                        <button id="add-library-image-btn" class="btn btn-outline-primary"><i class="bi bi-collection me-1"></i> Bibliothek</button>
+                        <button id="print-btn" class="btn btn-secondary"><i class="bi bi-printer me-1"></i> Als PDF drucken</button>
+                        <input type="file" id="image-upload" accept="image/*" style="display: none;">
+                    </div>
+                </div>
+
+                <div id="element-list" class="flex-grow-1 overflow-y-auto p-3">
+                    <!-- Form controls for elements will be generated here -->
+                </div>
+            </aside>
+
+            <!-- Main Preview Area -->
+            <main class="col-md-8 col-lg-9 bg-light d-flex justify-content-center align-items-start p-4 overflow-auto h-100">
+                <div id="poster" class="poster-paper bg-white shadow">
+                    <!-- Poster elements will be rendered here -->
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Library Modal -->
+    <div id="library-modal" class="modal fade hidden" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Bild auswählen</h5>
+                    <button type="button" id="close-library-btn" class="btn-close" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="library-grid" class="d-flex flex-wrap gap-3 justify-content-center">
+                        <!-- Images will be rendered here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>

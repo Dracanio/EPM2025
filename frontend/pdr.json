@@ -1,0 +1,250 @@
+{
+  "name": "Poster Designer TH Köln – Frontend",
+  "version": "1.0",
+  "goal": "Browserbasierter Poster-Editor im TH-Köln-Corporate-Design mit Drag & Drop, Styleguide-Sicherheit, PDF- und LaTeX-Export.",
+  "techStack": {
+    "framework": "Vue 3",
+    "language": "TypeScript",
+    "stateManagement": "Pinia oder Zustand-artiger Store (z.B. eigene Composables)",
+    "uiStyling": {
+      "css": "Tailwind CSS",
+      "components": "shadcn/ui-ähnliches Komponenten-Set oder Headless UI"
+    },
+    "canvas": "Konva (über eine Vue-Integration oder direkt über die JS-API)",
+    "latexPreview": "KaTeX oder MathJax",
+    "pdfExport": "html2canvas + jsPDF",
+    "authIntegration": "REST-API Spring Boot Backend"
+  },
+  "nonGoals": [
+    "Kein Canva-Clone",
+    "Keine externen kostenpflichtigen Editor-SDKs",
+    "Kein generischer Design-Editor ohne Styleguide-Regeln"
+  ],
+  "coreUserFlows": [
+    "User loggt sich ein.",
+    "User wählt ein TH-Köln-Template.",
+    "Poster wird im Editor geöffnet (Canvas).",
+    "User bearbeitet Texte, Bilder und Formeln.",
+    "Styleguide-Regeln werden automatisch erzwungen.",
+    "User exportiert Poster als PDF oder LaTeX."
+  ],
+  "frontendStructure": {
+    "routing": [
+      "/login",
+      "/templates",
+      "/editor/:posterId",
+      "/print/:posterId"
+    ],
+    "folders": {
+      "core": {
+        "store": [
+          "useAuthStore.ts",
+          "useEditorStore.ts"
+        ],
+        "models": [
+          "poster.ts",
+          "template.ts",
+          "element.ts",
+          "asset.ts"
+        ]
+      },
+      "modules": {
+        "auth": [
+          "LoginPage.vue"
+        ],
+        "library": [
+          "TemplateLibraryPage.vue"
+        ],
+        "editor": [
+          "EditorPage.vue",
+          "PosterCanvas.vue",
+          "Sidebar.vue",
+          "Inspectors (TextInspector.vue, ImageInspector.vue, LayoutInspector.vue, LatexInspector.vue)"
+        ]
+      },
+      "styleguide": [
+        "colors.ts",
+        "typography.ts",
+        "layoutRules.ts"
+      ],
+      "utils": [
+        "exportPdf.ts",
+        "exportLatexDto.ts",
+        "styleValidation.ts",
+        "unitConversion.ts"
+      ]
+    }
+  },
+  "dataModel": {
+    "Poster": {
+      "id": "string",
+      "templateId": "string",
+      "format": "A4|A3|A2",
+      "elements": "PosterElement[]",
+      "meta": {
+        "title": "string",
+        "ownerId": "string"
+      }
+    },
+    "PosterElementBase": {
+      "id": "string",
+      "type": "text|image|latex",
+      "name": "string",
+      "xMm": "number",
+      "yMm": "number",
+      "widthMm": "number",
+      "heightMm": "number",
+      "rotationDeg": "number",
+      "locked": "boolean"
+    },
+    "TextElement": {
+      "extends": "PosterElementBase",
+      "text": "string",
+      "variant": "title|subtitle|body",
+      "align": "left|center|right"
+    },
+    "ImageElement": {
+      "extends": "PosterElementBase",
+      "assetId": "string",
+      "fit": "contain|cover"
+    },
+    "LatexElement": {
+      "extends": "PosterElementBase",
+      "latex": "string"
+    },
+    "Template": {
+      "id": "string",
+      "name": "string",
+      "format": "A4|A3|A2",
+      "allowedZones": [
+        {
+          "role": "title|text|image|logo",
+          "xMm": "number",
+          "yMm": "number",
+          "widthMm": "number",
+          "heightMm": "number",
+          "editable": "boolean"
+        }
+      ],
+      "defaultElements": "PosterElement[]"
+    }
+  },
+  "editorBehavior": {
+    "canvas": {
+      "library": "Konva",
+      "layers": [
+        "GuideLayer (Raster, Ränder)",
+        "BackgroundLayer (Farbe, Logos, read-only)",
+        "ContentLayer (Text, Bilder, LaTeX)"
+      ],
+      "interactions": [
+        "Drag & Drop von Elementen",
+        "Resize/Rotate via Transformer",
+        "Click-Selection",
+        "Zoom (optional)"
+      ]
+    },
+    "styleguideEnforcement": {
+      "colors": "Palette aus styleguide/colors.ts; UI nur mit Auswahl, kein freier Color-Picker.",
+      "fonts": "Schriften + Größen aus styleguide/typography.ts.",
+      "layout": "Bewegung/Resize wird gegen allowedZones und Schutzräume geprüft.",
+      "validation": "Bei Verstoß Snap-Back oder automatische Korrektur."
+    },
+    "inspectors": {
+      "TextInspector": [
+        "Text-Inhalt",
+        "Variante (Titel/Body)",
+        "Ausrichtung"
+      ],
+      "ImageInspector": [
+        "Asset-Auswahl",
+        "Breite/Höhe"
+      ],
+      "LatexInspector": [
+        "LaTeX-Input",
+        "Preview mit KaTeX",
+        "Hinweis: Export geht als LaTeX-String ans Backend"
+      ],
+      "LayoutInspector": [
+        "Position (x/y in mm)",
+        "Breite/Höhe",
+        "Rotation"
+      ]
+    }
+  },
+  "export": {
+    "print": {
+      "approach": "Route /print/:posterId mit minimalem Layout, CSS-Print-Regeln aus Prototyp angepasst.",
+      "trigger": "Button 'Drucken' ruft window.print() auf."
+    },
+    "pdf": {
+      "MVP": "html2canvas Screenshot des Poster-Views + jsPDF (eine Seite, passendes Format).",
+      "future": "Option Umstieg auf Backend-PDF mit strukturiertem DTO."
+    },
+    "latex": {
+      "frontend": "Sammelt LaTeX-Strings + Layoutdaten aller LatexElemente.",
+      "backendContract": {
+        "endpoint": "POST /posters/{id}/export/latex",
+        "payload": "Poster + Template + Elemente (inkl. latex-Felder)",
+        "result": "LaTeX-Datei oder compilierte PDF"
+      }
+    }
+  },
+  "stateManagement": {
+    "editorStore": {
+      "state": [
+        "activePoster (Poster)",
+        "selectedElementId",
+        "history (Undo/Redo)",
+        "zoomLevel",
+        "isDirty"
+      ],
+      "actions": [
+        "loadPoster(posterId)",
+        "addElement(element)",
+        "updateElement(id, partial)",
+          "deleteElement(id)",
+          "setSelectedElement(id)",
+          "undo()",
+          "redo()"
+      ]
+    },
+    "authStore": {
+      "state": [
+        "userId",
+        "role",
+        "token"
+      ],
+      "actions": [
+        "setUser(user)",
+        "logout()"
+      ]
+    }
+  },
+  "phasedPlan": {
+    "phase1_setup": [
+      "Vue 3 + TypeScript + Vite-Projekt aufsetzen.",
+      "Tailwind + Komponenten-Bibliothek + Stores konfigurieren.",
+      "Routing + Basislayout (Sidebar + Canvas-Bereich)."
+    ],
+    "phase2_editorCore": [
+      "Konva-Canvas mit Posterfläche (A4).",
+      "Text- und Bild-Elemente im Store und auf Canvas.",
+      "Drag & Drop, Selection, Resize."
+    ],
+    "phase3_styleguide": [
+      "Styleguide-Farben, Fonts, Layout-Zonen definieren.",
+      "Inspector-Komponenten anbinden.",
+      "Styleguide-Validation bei Änderungen."
+    ],
+    "phase4_export": [
+      "Print-View + window.print() mit Print-CSS.",
+      "PDF-Export mit html2canvas + jsPDF."
+    ],
+    "phase5_latex_templates": [
+      "LaTeX-Inspector mit Preview.",
+      "Export-DTO für Backend (LaTeX + Layout).",
+      "Template-Übersichtsseite + Auswahl."
+    ]
+  }
+}

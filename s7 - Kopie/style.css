@@ -1,0 +1,119 @@
+:root {
+    --paper-color: #ffffff;
+}
+
+.modal {
+    background: rgba(0,0,0,0.5);
+    z-index: 1055;
+}
+
+.modal.hidden {
+    display: none !important;
+    pointer-events: none;
+    visibility: hidden;
+    z-index: -1;
+}
+
+.modal:not(.hidden) {
+    display: block !important;
+    opacity: 1;
+    visibility: visible;
+}
+
+.poster-paper {
+    position: relative;
+    overflow: hidden; 
+    flex-shrink: 0; 
+    transition: width 0.3s, height 0.3s;
+}
+
+.poster-element {
+    position: absolute;
+    white-space: pre-wrap; 
+    word-break: break-word;
+    user-select: none;
+}
+
+.poster-element img {
+    max-width: 100%;
+    max-height: 100%;
+    display: block;
+}
+
+.library-item {
+    width: 100px;
+    height: 100px;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 0.5rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition: border-color 0.2s, background-color 0.2s;
+}
+
+.library-item:hover {
+    background-color: #f8f9fa;
+    border-color: #adb5bd;
+}
+
+.library-item img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+/* Print Styling */
+@media print {
+    @page {
+        margin: 0;
+    }
+    
+    body > *:not(.container-fluid) {
+        display: none !important;
+    }
+    
+    aside, .col-md-4, .col-lg-3 {
+        display: none !important;
+    }
+
+    .col-md-8, .col-lg-9 {
+        display: block !important;
+        width: 100% !important;
+        flex: 0 0 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .container-fluid, .row, main {
+        display: block !important;
+        width: 100% !important;
+        height: auto !important;
+        overflow: visible !important;
+        background: white !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+    }
+
+    .modal {
+        display: none !important;
+    }
+
+    .poster-paper {
+        margin: 0 !important;
+        box-shadow: none !important;
+        border: none !important;
+
+        position: relative !important;
+        top: 0 !important;
+        left: 0 !important;
+        
+        page-break-after: always;
+        page-break-inside: avoid;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+}

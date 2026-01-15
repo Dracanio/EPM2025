@@ -1,6 +1,8 @@
 # Dependencies
 node_modules/
 **/node_modules/
+.gradle/
+.vite/
 
 # Environment variables
 .env
@@ -11,6 +13,7 @@ node_modules/
 dist/
 build/
 *.log
+
 
 # IDE
 .vscode/
