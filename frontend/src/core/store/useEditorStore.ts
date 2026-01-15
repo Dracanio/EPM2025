@@ -33,7 +33,10 @@ export const useEditorStore = defineStore('editor', () => {
       align: 'center',
       fontSize: 48,
       fontFamily: 'Arial',
-      color: '#000000'
+      color: '#000000',
+      fontWeight: 'bold',
+      fontStyle: 'normal',
+      backgroundColor: 'transparent'
     };
 
     activePoster.value = {
@@ -84,6 +87,57 @@ export const useEditorStore = defineStore('editor', () => {
     }
   }
 
+  function moveElementUp(id: string) {
+    if (!activePoster.value) return;
+    const elements = activePoster.value.elements;
+    const index = elements.findIndex(el => el.id === id);
+    if (index === -1 || index === elements.length - 1) return;
+    
+    // Swap with next
+    const temp = elements[index];
+    const next = elements[index + 1];
+    if (temp && next) {
+        elements[index] = next;
+        elements[index + 1] = temp;
+        isDirty.value = true;
+    }
+  }
+
+  function moveElementDown(id: string) {
+    if (!activePoster.value) return;
+    const elements = activePoster.value.elements;
+    const index = elements.findIndex(el => el.id === id);
+    if (index <= 0) return;
+    
+    // Swap with previous
+    const temp = elements[index];
+    const prev = elements[index - 1];
+    if (temp && prev) {
+       elements[index] = prev;
+       elements[index - 1] = temp;
+       isDirty.value = true;
+    }
+  }
+
+  function alignElement(id: string, type: 'center' | 'h-center' | 'v-center') {
+    if (!activePoster.value) return;
+    const element = activePoster.value.elements.find(el => el.id === id);
+    if (!element) return;
+
+    const A4_WIDTH = 210;
+    const A4_HEIGHT = 297;
+
+    if (type === 'center') {
+        element.xMm = (A4_WIDTH - element.widthMm) / 2;
+        element.yMm = (A4_HEIGHT - element.heightMm) / 2;
+    } else if (type === 'h-center') {
+        element.xMm = (A4_WIDTH - element.widthMm) / 2;
+    } else if (type === 'v-center') {
+        element.yMm = (A4_HEIGHT - element.heightMm) / 2;
+    }
+    isDirty.value = true;
+  }
+
   return {
     activePoster,
     selectedElementId,
@@ -94,6 +148,9 @@ export const useEditorStore = defineStore('editor', () => {
     addElement,
     updateElement,
     selectElement,
-    deleteElement
+    deleteElement,
+    moveElementUp,
+    moveElementDown,
+    alignElement
   };
 });

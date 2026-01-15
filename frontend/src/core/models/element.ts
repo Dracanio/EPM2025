@@ -20,6 +20,9 @@ export interface TextElement extends PosterElementBase {
   fontSize: number; // Added for rendering
   fontFamily: string; // Added for rendering
   color: string; // Added for rendering
+  fontWeight: 'normal' | 'bold';
+  fontStyle: 'normal' | 'italic';
+  backgroundColor: string; // 'transparent' or hex
 }
 
 export interface ImageElement extends PosterElementBase {
