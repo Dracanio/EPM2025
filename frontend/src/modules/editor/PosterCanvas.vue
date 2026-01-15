@@ -1,23 +1,42 @@
 <template>
-  <div class="shadow-2xl relative bg-white" :style="{ width: stageWidth + 'px', height: stageHeight + 'px' }">
+  <div :id="containerId" class="shadow-2xl relative bg-white transition-all duration-200 ease-out" 
+       :style="{ 
+          width: computedStageWidth + 'px', 
+          height: computedStageHeight + 'px' 
+       }">
     <v-stage
       ref="stageRef"
       :config="stageConfig"
       @mousedown="handleStageMouseDown"
       @touchstart="handleStageMouseDown"
+      @dragmove="handleDragMove"
+      @dragend="handleDragEndGlobal"
     >
       <v-layer>
         <!-- Background Paper -->
         <v-rect :config="paperConfig" />
 
+        <!-- Grid Lines (Guides) -->
+        <v-line 
+          v-if="!readOnly"
+          v-for="(line, i) in guides" 
+          :key="'guide-' + i" 
+          :config="{
+            points: line.points,
+            stroke: '#dd1166', // TH Red
+            strokeWidth: 1 / zoomLevel, 
+            dash: [4 / zoomLevel, 4 / zoomLevel]
+          }" 
+        />
+
         <!-- Elements -->
-        <template v-for="element in elements" :key="element.id">
-          <!-- Text Element (Label for Background Support) -->
+        <template v-for="element in elementsToRender" :key="element.id">
+          <!-- Text Element -->
           <v-label
             v-if="element.type === 'text'"
             :config="getLabelConfig(element as TextElement)"
-            @dragend="(e) => handleDragEnd(e, element.id)"
-            @transformend="(e) => handleTransformEnd(e, element.id)"
+            @dragend="(e: Konva.KonvaEventObject<DragEvent>) => !readOnly && handleDragEnd(e, element.id)"
+            @transformend="(e: Konva.KonvaEventObject<Event>) => !readOnly && handleTransformEnd(e, element.id)"
           >
             <v-tag :config="getTagConfig(element as TextElement)" />
             <v-text :config="getTextContentConfig(element as TextElement)" />
@@ -27,21 +46,18 @@
           <v-image
             v-if="element.type === 'image'"
             :config="getImageConfig(element as ImageElement)"
-            @dragend="(e) => handleDragEnd(e, element.id)"
-            @transformend="(e) => handleTransformEnd(e, element.id)"
+            @dragend="(e: Konva.KonvaEventObject<DragEvent>) => !readOnly && handleDragEnd(e, element.id)"
+            @transformend="(e: Konva.KonvaEventObject<Event>) => !readOnly && handleTransformEnd(e, element.id)"
           />
         </template>
 
-        <!-- Transformer -->
+        <!-- Transformer (Only if not readOnly) -->
         <v-transformer
+          v-if="!readOnly"
           ref="transformerRef"
           :config="{
-            enabledAnchors: ['top-left', 'top-right', 'bottom-left', 'bottom-right'],
-            boundBoxFunc: (oldBox, newBox) => {
-              // Prevent resizing to 0
-              if (newBox.width < 5 || newBox.height < 5) {
-                return oldBox;
-              }
+            boundBoxFunc: (oldBox: any, newBox: any) => {
+              if (newBox.width < 5 || newBox.height < 5) return oldBox;
               return newBox;
             }
           }"
@@ -52,64 +68,137 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, nextTick } from 'vue';
+import { computed, ref, watch } from 'vue';
 import { useEditorStore } from '@/core/store/useEditorStore';
-import type { PosterElement, TextElement, ImageElement } from '@/core/models/element';
+import type { TextElement, ImageElement, PosterElement } from '@/core/models/element';
 import Konva from 'konva';
+
+const props = defineProps<{
+  elements?: PosterElement[]; // Optional override
+  widthMm?: number;
+  heightMm?: number;
+  readOnly?: boolean;
+  pageId?: string; // To uniquely identify stage if multiple
+}>();
 
 const store = useEditorStore();
 
 // Constants
 const PIXELS_PER_MM = 3.7795;
-const A4_WIDTH_MM = 210;
-const A4_HEIGHT_MM = 297;
+
+// Resolving Props vs Store
+const elementsToRender = computed(() => props.elements || store.currentElements);
+const activeWidthMm = computed(() => props.widthMm ?? store.activePoster?.widthMm ?? 210);
+const activeHeightMm = computed(() => props.heightMm ?? store.activePoster?.heightMm ?? 297);
+const zoomLevel = computed(() => props.readOnly ? 1 : store.zoomLevel); // Force zoom 1 for print/readonly if needed, or pass prop? 
+// Actually for print we probably want zoom 1.
+const isReadOnly = computed(() => props.readOnly || false);
+
+const containerId = computed(() => props.pageId ? `poster-stage-${props.pageId}` : 'poster-stage-container');
 
 // Computeds
-const stageWidth = A4_WIDTH_MM * PIXELS_PER_MM;
-const stageHeight = A4_HEIGHT_MM * PIXELS_PER_MM;
+const unscaledWidth = computed(() => activeWidthMm.value * PIXELS_PER_MM);
+const unscaledHeight = computed(() => activeHeightMm.value * PIXELS_PER_MM);
 
-const elements = computed(() => store.activePoster?.elements || []);
+const computedStageWidth = computed(() => unscaledWidth.value * zoomLevel.value);
+const computedStageHeight = computed(() => unscaledHeight.value * zoomLevel.value);
+
 const selectedId = computed(() => store.selectedElementId);
 
 // Stage Config
-const stageConfig = {
-  width: stageWidth,
-  height: stageHeight,
-};
+const stageConfig = computed(() => ({
+  width: computedStageWidth.value,
+  height: computedStageHeight.value,
+  scale: { x: zoomLevel.value, y: zoomLevel.value }
+}));
 
 // Paper Config
-const paperConfig = {
-  width: stageWidth,
-  height: stageHeight,
-  fill: 'white',
-  listening: false, // Background shouldn't intercept clicks for selection unless we want to deselect
-};
+const paperConfig = computed(() => ({
+  width: unscaledWidth.value,
+  height: unscaledHeight.value,
+  fill: store.activePoster?.backgroundColor || 'white',
+  listening: !isReadOnly.value, 
+  name: 'background'
+}));
 
 // Refs
 const stageRef = ref(null);
 const transformerRef = ref(null);
+const guides = ref<{ points: number[], orientation: 'v' | 'h' }[]>([]);
 
 // Helpers
 const mmToPx = (mm: number) => mm * PIXELS_PER_MM;
 const pxToMm = (px: number) => px / PIXELS_PER_MM;
 
-// Config Generators
+const RENARD_SPACINGS_MM = [16.6, 20.8, 26.6, 33.2, 41.5, 52.3, 66.4, 83.0, 104.6, 132.8, 166.0];
+
+function handleDragMove(e: Konva.KonvaEventObject<DragEvent>) {
+    if (isReadOnly.value) return;
+    
+    const node = e.target;
+    guides.value = [];
+    
+    const x = node.x();
+    const y = node.y();
+    const W = unscaledWidth.value;
+    const H = unscaledHeight.value;
+    
+    let snappedX = x;
+    let snappedY = y;
+    const SNAP_PX = 10 / zoomLevel.value; 
+    
+    RENARD_SPACINGS_MM.forEach(mm => {
+        const px = mmToPx(mm);
+        if (Math.abs(x - px) < SNAP_PX) {
+            snappedX = px;
+            guides.value.push({ points: [px, 0, px, H], orientation: 'v' });
+        }
+        const rightPx = W - px;
+        if (Math.abs(x - rightPx) < SNAP_PX) {
+            snappedX = rightPx;
+            guides.value.push({ points: [rightPx, 0, rightPx, H], orientation: 'v' });
+        }
+    });
+    
+     RENARD_SPACINGS_MM.forEach(mm => {
+        const px = mmToPx(mm);
+        if (Math.abs(y - px) < SNAP_PX) {
+            snappedY = px;
+            guides.value.push({ points: [0, px, W, px], orientation: 'h' });
+        }
+        const botPx = H - px;
+        if (Math.abs(y - botPx) < SNAP_PX) {
+            snappedY = botPx;
+            guides.value.push({ points: [0, botPx, W, botPx], orientation: 'h' });
+        }
+    });
+    
+    node.x(snappedX);
+    node.y(snappedY);
+}
+
+function handleDragEndGlobal() {
+    guides.value = [];
+}
+
 function getLabelConfig(element: TextElement) {
   return {
     id: element.id,
     x: mmToPx(element.xMm),
     y: mmToPx(element.yMm),
     rotation: element.rotationDeg,
-    draggable: !element.locked,
-    name: 'element', // Important for selection logic
+    draggable: !isReadOnly.value && !element.locked,
+    name: 'element',
+    dragBoundFunc: function(pos: { x: number, y: number }) {
+        return pos;
+    }
   };
 }
 
 function getTagConfig(element: TextElement) {
   return {
     fill: element.backgroundColor === 'transparent' ? undefined : element.backgroundColor,
-    cornerRadius: 0, // Optional: could expose this later
-    // Pointer handling: ensure clicks pass through if needed, but usually tag catches them
+    cornerRadius: 0,
   };
 }
 
@@ -131,27 +220,32 @@ function getTextContentConfig(element: TextElement) {
     width: mmToPx(element.widthMm),
     align: element.align,
     fontStyle: fontStyle,
-    padding: 5, // Match prototype padding
+    padding: 5,
   };
 }
 
-// Image Loading Logic
-const imageCache = ref<Record<string, HTMLImageElement>>({});
+const imageCache = ref<Record<string, { src: string, element: HTMLImageElement }>>({});
 
-watch(() => elements.value, (newElements) => {
-  newElements.forEach(el => {
-    if (el.type === 'image' && el.src && !imageCache.value[el.id]) {
-      const img = new Image();
-      img.src = el.src;
-      img.onload = () => {
-        imageCache.value[el.id] = img;
-      };
+watch(() => elementsToRender.value, (newElements) => {
+  newElements.forEach((el: PosterElement) => {
+    if (el.type === 'image' && (el as ImageElement).src) {
+      const imgEl = el as ImageElement;
+      const cached = imageCache.value[el.id];
+      if (!cached || cached.src !== imgEl.src) {
+        const img = new Image();
+        img.src = imgEl.src!;
+        img.crossOrigin = 'Anonymous'; 
+        img.onload = () => {
+          imageCache.value[el.id] = { src: imgEl.src!, element: img };
+        };
+      }
     }
   });
 }, { deep: true, immediate: true });
 
 function getImageConfig(element: ImageElement) {
-  const imgObj = imageCache.value[element.id];
+  const cached = imageCache.value[element.id];
+  const imgObj = cached?.element;
   
   const config: any = {
     id: element.id,
@@ -160,90 +254,56 @@ function getImageConfig(element: ImageElement) {
     width: mmToPx(element.widthMm),
     height: mmToPx(element.heightMm),
     rotation: element.rotationDeg,
-    draggable: !element.locked,
+    draggable: !isReadOnly.value && !element.locked,
     name: 'element',
   };
 
   if (imgObj) {
     config.image = imgObj;
-    
-    // Fit Logic
     if (element.fit === 'cover') {
-        // Simple approximation for cover: we rely on crop.
-        // Konva image crop: {x,y,width,height} of the SOURCE image to draw.
-        // We want to fill the DESTINATION box (width/height).
         const aspectBox = config.width / config.height;
         const aspectImg = imgObj.width / imgObj.height;
-        
         let cropWidth, cropHeight, cropX, cropY;
 
         if (aspectImg > aspectBox) {
-            // Image is wider than box -> crop sides
             cropHeight = imgObj.height;
             cropWidth = imgObj.height * aspectBox;
             cropX = (imgObj.width - cropWidth) / 2;
             cropY = 0;
         } else {
-            // Image is taller than box -> crop top/bottom
             cropWidth = imgObj.width;
             cropHeight = imgObj.width / aspectBox;
             cropX = 0;
             cropY = (imgObj.height - cropHeight) / 2;
         }
-        
-        config.crop = {
-            x: cropX,
-            y: cropY,
-            width: cropWidth,
-            height: cropHeight
-        };
-    } else {
-        // Contain: Konva usually stretches. To 'contain', we normally change width/height,
-        // but the box size is fixed by user. So we center it? 
-        // Or we just let it stretch (fill) if "fit" is unknown. 
-        // Currently Konva v-image stretches source to width/height.
-        // "Contain" inside a fixed box typically means letterboxing (transparency).
-        // To implement that, we'd need to calculate the drawn rect size inside the box.
-        // For MVP, if "Contain", we might just reset crop and let it stretch? 
-        // No, user said "cover contain funktioniert nicht".
-        // Let's implement Contain by adjusting width/height of the Image Node itself to match aspect?
-        // But then the Selection Box might assume the full size.
-        // Complex. Let's start with Cover working correctly via Crop.
+        config.crop = { x: cropX, y: cropY, width: cropWidth, height: cropHeight };
     }
   } else {
-    // Placeholder config
     config.fill = '#ccc';
     config.stroke = '#666';
     config.dash = [5, 5];
   }
-
   return config;
 }
 
-// Interaction Handlers
 function handleStageMouseDown(e: Konva.KonvaEventObject<MouseEvent>) {
-  // clicked on stage - clear selection
-  if (e.target === e.target.getStage()) {
+  if (isReadOnly.value) return;
+
+  const isBackground = e.target === e.target.getStage() || e.target.name() === 'background';
+  if (isBackground) {
     store.selectElement(null);
     return;
   }
+  const parent = e.target.getParent();
+  if (parent && parent.className === 'Transformer') return;
 
-  // clicked on transformer - do nothing
-  const clickedOnTransformer = e.target.getParent().className === 'Transformer';
-  if (clickedOnTransformer) {
-    return;
-  }
-
-  // Find the element node (it might be the target, or a parent for Groups/Labels)
-  // We look for a node with name 'element'
-  let targetNode = e.target;
-  if (targetNode.name() !== 'element') {
-      targetNode = targetNode.findAncestor((node) => node.name() === 'element');
+  let targetNode: Konva.Node | null = e.target;
+  if (targetNode && targetNode.name() !== 'element') {
+      targetNode = targetNode.findAncestor((node: Konva.Node) => node.name() === 'element') as Konva.Node | null;
   }
 
   if (targetNode) {
-    const id = targetNode.id();
-    store.selectElement(id);
+    store.selectElement(targetNode.id());
   } else {
     store.selectElement(null);
   }
@@ -260,9 +320,6 @@ function handleDragEnd(e: Konva.KonvaEventObject<DragEvent>, id: string) {
 function handleTransformEnd(e: Konva.KonvaEventObject<Event>, id: string) {
   const node = e.target;
   const scaleX = node.scaleX();
-  const scaleY = node.scaleY();
-
-  // Reset scale and update width/height instead (to avoid scaling artifacts on text)
   node.scaleX(1);
   node.scaleY(1);
 
@@ -270,28 +327,21 @@ function handleTransformEnd(e: Konva.KonvaEventObject<Event>, id: string) {
     xMm: pxToMm(node.x()),
     yMm: pxToMm(node.y()),
     widthMm: pxToMm(node.width() * scaleX),
-    // For text, height is often auto, but we can track it. 
-    // If it's an image, height matters. 
-    // For text, we might only care about width.
     rotationDeg: node.rotation(),
   });
-  
-  // Update node dimensions immediately for UI sync if needed, though reactivity handles it
 }
 
-// Watch Selection to update Transformer
+// Watch selection but ignore if readOnly
 watch(selectedId, (newId) => {
+  if (isReadOnly.value) return;
   const transformerNode = (transformerRef.value as any)?.getNode();
   const stage = (stageRef.value as any)?.getStage();
-  
   if (!transformerNode || !stage) return;
-
   if (!newId) {
     transformerNode.nodes([]);
     transformerNode.getLayer().batchDraw();
     return;
   }
-
   const selectedNode = stage.findOne('#' + newId);
   if (selectedNode) {
     transformerNode.nodes([selectedNode]);
@@ -300,5 +350,4 @@ watch(selectedId, (newId) => {
     transformerNode.nodes([]);
   }
 });
-
 </script>

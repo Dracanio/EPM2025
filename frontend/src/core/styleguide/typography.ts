@@ -1,35 +1,48 @@
 export const typography = {
-  fonts: {
-    // Ideally 'Red Hat Text' or similar if imported
-    primary: 'Arial, sans-serif',
-    secondary: 'Georgia, serif'
-  },
-  sizes: {
-    title: 48, // pt or px equivalent for A4
-    subtitle: 32,
-    body: 12,
-    caption: 10
+  fontFamily: {
+    headings: '"Roboto Slab", serif',
+    body: '"PT Sans", sans-serif',
   },
   weights: {
     regular: 400,
-    bold: 700
+    bold: 700,
+  },
+  sizes: {
+    presentationTitle: 27,
+    slideTitle: 21,
+    headline: 17,
+    body: 17,
+    caption: 14,
+  },
+  lineHeights: {
+    tight: 0.9, // 90%
+    normal: 1.0, // 100%
   }
 } as const;
 
 export const textVariants = {
   title: {
-    fontFamily: typography.fonts.primary,
-    fontSize: typography.sizes.title,
-    fontWeight: typography.weights.bold
+    fontFamily: typography.fontFamily.headings,
+    fontSize: typography.sizes.presentationTitle,
+    fontWeight: 'bold', // mapped to string for Konva/CSS
+    lineHeight: typography.lineHeights.tight
   },
   subtitle: {
-    fontFamily: typography.fonts.primary,
-    fontSize: typography.sizes.subtitle,
-    fontWeight: typography.weights.regular
+    fontFamily: typography.fontFamily.headings,
+    fontSize: typography.sizes.slideTitle,
+    fontWeight: 'bold',
+    lineHeight: typography.lineHeights.tight
   },
   body: {
-    fontFamily: typography.fonts.primary,
+    fontFamily: typography.fontFamily.body,
     fontSize: typography.sizes.body,
-    fontWeight: typography.weights.regular
+    fontWeight: 'normal',
+    lineHeight: typography.lineHeights.normal
+  },
+  caption: {
+    fontFamily: typography.fontFamily.body,
+    fontSize: typography.sizes.caption,
+    fontWeight: 'normal',
+    lineHeight: typography.lineHeights.normal
   }
 } as const;

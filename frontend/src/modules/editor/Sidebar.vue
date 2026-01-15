@@ -41,16 +41,16 @@ function addText() {
     type: 'text',
     name: 'Text Layer',
     xMm: 20,
-    yMm: 100,
-    widthMm: 100,
-    heightMm: 20,
+    yMm: 90,
+    widthMm: 170, // Wider by default
+    heightMm: 40,
     rotationDeg: 0,
     locked: false,
-    text: 'Neuer Text',
+    text: 'Dies ist ein Textblock.\nHier können Sie Ihren Inhalt eingeben.\nMehrere Zeilen sind möglich.',
     variant: 'body',
     align: 'left',
-    fontSize: 24,
-    fontFamily: 'Arial',
+    fontSize: 17, // 17pt as per styleguide body
+    fontFamily: '"PT Sans", sans-serif',
     color: '#000000',
     fontWeight: 'normal',
     fontStyle: 'normal',
@@ -76,16 +76,21 @@ function handleImageUpload(event: Event) {
         id: crypto.randomUUID(),
         type: 'image',
         name: 'Image Layer',
-        xMm: 50,
-        yMm: 50,
-        widthMm: 100,
-        heightMm: 70, // Default aspect, maybe adjust later based on image
+        xMm: 20, // Aligned with title/text
+        yMm: 20, // Start high
+        widthMm: 170, // Full width default
+        heightMm: 60, // Default aspect, maybe adjust later based on image
         rotationDeg: 0,
         locked: false,
         assetId: 'upload',
         src: src,
         fit: 'cover'
       };
+      
+      // Smart positioning: If we have title, move down? 
+      // For now, let's just push it. User said "Boom a picture... header... text area".
+      // Maybe defaults are: Picture at top, Title below, Text below.
+      
       editorStore.addElement(newImage);
     };
     reader.readAsDataURL(file);
@@ -132,8 +137,8 @@ function addImage() {
     </div>
     
     <div class="p-4 border-t border-gray-100 space-y-2">
-      <button class="w-full py-2 bg-gray-800 text-white rounded hover:bg-gray-900 transition mb-1">
-        Export / Print
+      <button @click="router.push('/templates')" class="w-full py-2 bg-white text-gray-600 border border-gray-200 rounded hover:bg-gray-50 transition text-sm mb-1">
+        Back to Templates
       </button>
       <button @click="authStore.logout(); router.push('/login')" class="w-full py-2 bg-white text-gray-600 border border-gray-200 rounded hover:bg-gray-50 transition text-sm">
         Logout

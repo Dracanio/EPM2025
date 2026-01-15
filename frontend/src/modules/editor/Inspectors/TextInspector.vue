@@ -11,17 +11,37 @@
     </div>
 
     <div class="space-y-1">
-      <label class="text-xs font-semibold text-gray-500 uppercase">Stil</label>
-      <div class="flex gap-2">
-         <select 
-          v-model="localVariant" 
-          class="w-full text-sm p-2 border border-gray-200 rounded"
-          @change="applyVariant"
-        >
-          <option value="title">Titel</option>
-          <option value="subtitle">Untertitel</option>
-          <option value="body">Fließtext</option>
-        </select>
+      <label class="text-xs font-semibold text-gray-500 uppercase">Schriftart</label>
+      <select 
+        v-model="localFontFamily" 
+        class="w-full text-sm p-2 border border-gray-200 rounded"
+        @change="update"
+      >
+        <option :value="typography.fontFamily.headings">Roboto Slab (Überschriften)</option>
+        <option :value="typography.fontFamily.body">PT Sans (Fließtext)</option>
+      </select>
+    </div>
+
+    <div class="space-y-1">
+      <label class="text-xs font-semibold text-gray-500 uppercase">Größe (Vorgeschlagen)</label>
+      <select 
+        v-model.number="localFontSize" 
+        class="w-full text-sm p-2 border border-gray-200 rounded"
+        @change="update"
+      >
+        <option :value="typography.sizes.presentationTitle">Präsentationstitel ({{ typography.sizes.presentationTitle }}pt)</option>
+        <option :value="typography.sizes.slideTitle">Folientitel ({{ typography.sizes.slideTitle }}pt)</option>
+        <option :value="typography.sizes.headline">Überschrift ({{ typography.sizes.headline }}pt)</option>
+        <option :value="typography.sizes.body">Fließtext ({{ typography.sizes.body }}pt)</option>
+        <option :value="typography.sizes.caption">Bildunterschrift ({{ typography.sizes.caption }}pt)</option>
+        <option :value="localFontSize" v-if="!isStandardSize">Benutzerdefiniert ({{ localFontSize }}pt)</option>
+      </select>
+    </div>
+
+    <div class="space-y-1">
+      <label class="text-xs font-semibold text-gray-500 uppercase">Stil & Ausrichtung</label>
+      <div class="flex gap-2 mb-2">
+
         <button 
           @click="toggleBold"
           :class="['px-3 border rounded flex items-center justify-center', localFontWeight === 'bold' ? 'bg-gray-200 border-gray-400' : 'bg-white border-gray-200']"
@@ -39,17 +59,13 @@
       </div>
     </div>
 
-    <div class="grid grid-cols-2 gap-2">
-      <div class="space-y-1">
-        <label class="text-xs font-semibold text-gray-500 uppercase">Größe (pt/px)</label>
-        <input 
-          type="number" 
-          v-model.number="localFontSize" 
-          class="w-full text-sm p-2 border border-gray-200 rounded"
-          @input="update"
-        />
-      </div>
-      <div class="space-y-1">
+    <!-- Custom Size (Hidden or secondary) -->
+    <div class="space-y-1 mt-2" v-if="false">
+      <label class="text-xs font-semibold text-gray-500 uppercase">Benutzerdefinierte Größe</label>
+      <input type="number" v-model.number="localFontSize" @input="update" class="w-full text-sm p-2 border border-gray-200 rounded" />
+    </div>
+
+    <div class="space-y-1 w-full">
         <label class="text-xs font-semibold text-gray-500 uppercase">Text Ausrichtung</label>
         <div class="flex border border-gray-200 rounded overflow-hidden">
           <button 
@@ -74,7 +90,6 @@
             <AlignRight :size="16" />
           </button>
         </div>
-      </div>
     </div>
 
     <div class="space-y-1">
@@ -122,7 +137,7 @@
 import { ref, watch, computed } from 'vue';
 import type { TextElement } from '@/core/models/element';
 import { useEditorStore } from '@/core/store/useEditorStore';
-import { textVariants } from '@/core/styleguide/typography';
+import { typography } from '@/core/styleguide/typography';
 import { colors } from '@/core/styleguide/colors';
 import { Bold, Italic, AlignLeft, AlignCenter, AlignRight } from 'lucide-vue-next';
 
@@ -136,6 +151,7 @@ const store = useEditorStore();
 const localText = ref(props.element.text);
 const localVariant = ref(props.element.variant);
 const localFontSize = ref(props.element.fontSize);
+const localFontFamily = ref(props.element.fontFamily || typography.fontFamily.body);
 const localAlign = ref(props.element.align);
 const localColor = ref(props.element.color);
 const localFontWeight = ref(props.element.fontWeight || 'normal');
@@ -143,12 +159,14 @@ const localFontStyle = ref(props.element.fontStyle || 'normal');
 const localBackgroundColor = ref(props.element.backgroundColor || 'transparent');
 
 const availableColors = [
-  { name: 'Red', value: colors.primary.DEFAULT },
-  { name: 'Dark Red', value: colors.primary.dark },
-  { name: 'Black', value: colors.basic.black },
-  { name: 'Dark Gray', value: colors.gray[900] },
-  { name: 'Gray', value: colors.gray[500] },
-  { name: 'White', value: colors.basic.white },
+  { name: 'TH Red', value: colors.palette.thRed },
+  { name: 'Purple', value: colors.palette.purple },
+  { name: 'Blue', value: colors.palette.blue },
+  { name: 'Green', value: colors.palette.green },
+  { name: 'Dark Gray', value: colors.palette.darkGray },
+  { name: 'Medium Gray', value: colors.palette.mediumGray },
+  { name: 'Light Gray', value: colors.palette.lightGray },
+  { name: 'White', value: colors.palette.white },
 ];
 
 // Watch props incase selection changes
@@ -156,6 +174,7 @@ watch(() => props.element, (newVal) => {
   localText.value = newVal.text;
   localVariant.value = newVal.variant;
   localFontSize.value = newVal.fontSize;
+  localFontFamily.value = newVal.fontFamily || typography.fontFamily.body;
   localAlign.value = newVal.align;
   localColor.value = newVal.color || '#000000';
   localFontWeight.value = newVal.fontWeight || 'normal';
@@ -163,10 +182,15 @@ watch(() => props.element, (newVal) => {
   localBackgroundColor.value = newVal.backgroundColor || 'transparent';
 }, { deep: true });
 
+const isStandardSize = computed(() => {
+  return Object.values(typography.sizes).includes(localFontSize.value as any);
+});
+
 function update() {
   store.updateElement(props.element.id, {
     text: localText.value,
     fontSize: localFontSize.value,
+    fontFamily: localFontFamily.value,
     align: localAlign.value,
     color: localColor.value,
     fontWeight: localFontWeight.value,
@@ -175,18 +199,9 @@ function update() {
   });
 }
 
-function applyVariant() {
-  const variant = localVariant.value;
-  const style = textVariants[variant];
-  store.updateElement(props.element.id, {
-    variant: variant,
-    fontSize: style.fontSize,
-    fontFamily: style.fontFamily,
-    // Keep existing color or reset? Let's keep existing.
-  });
-  // Update local state to match
-  localFontSize.value = style.fontSize;
-}
+// Unused but keeping for reference if needed
+// function applyVariant() { ... }
+// function toggleBg(e: Event) { ... }
 
 function setAlign(align: 'left' | 'center' | 'right') {
   localAlign.value = align;
@@ -206,15 +221,5 @@ function toggleBold() {
 function toggleItalic() {
   localFontStyle.value = localFontStyle.value === 'italic' ? 'normal' : 'italic';
   update();
-}
-
-function toggleBg(e: Event) {
-    const checked = (e.target as HTMLInputElement).checked;
-    if (checked) {
-        localBackgroundColor.value = '#ffffff'; // Default to white
-    } else {
-        localBackgroundColor.value = 'transparent';
-    }
-    update();
 }
 </script>

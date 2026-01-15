@@ -24,9 +24,32 @@
         :element="selectedElement as ImageElement" 
       />
       
-      <div v-if="!selectedElement" class="text-center text-gray-400 text-sm italic py-8 flex flex-col items-center gap-2">
-        <MousePointerClick :size="32" class="opacity-20" />
-        <span>Kein Element ausgewählt.<br>Klicke auf ein Element auf dem Poster.</span>
+      <div v-if="!selectedElement" class="space-y-6">
+        <div class="text-center text-gray-400 text-sm italic py-4 flex flex-col items-center gap-2">
+          <MousePointerClick :size="32" class="opacity-20" />
+          <span>Kein Element ausgewählt.<br>Klicke auf ein Element auf dem Poster.</span>
+        </div>
+        
+        <!-- Poster Properties -->
+        <div class="space-y-2 px-4">
+           <label class="text-xs font-semibold text-gray-500 uppercase">Poster Hintergrund</label>
+           <div class="flex flex-wrap gap-2">
+             <button 
+                v-for="color in availableColors" 
+                :key="color.value" 
+                @click="setPosterBackground(color.value)"
+                class="w-8 h-8 rounded-full border border-gray-200 shadow-sm focus:ring-2 ring-offset-1 ring-red-500"
+                :style="{ backgroundColor: color.value }"
+                :title="color.name"
+             ></button>
+              <input 
+                type="color" 
+                :value="store.activePoster?.backgroundColor || '#ffffff'" 
+                @input="(e) => setPosterBackground((e.target as HTMLInputElement).value)" 
+                class="w-8 h-8 p-0 border-0 rounded-full overflow-hidden" 
+              />
+           </div>
+        </div>
       </div>
 
        <!-- Global Alignment (Page) -->
@@ -74,6 +97,7 @@ import { useEditorStore } from '@/core/store/useEditorStore';
 import TextInspector from './TextInspector.vue';
 import ImageInspector from './ImageInspector.vue';
 import type { TextElement, ImageElement } from '@/core/models/element';
+import { colors } from '@/core/styleguide/colors';
 import { 
   X, 
   MousePointerClick, 
@@ -88,6 +112,21 @@ import {
 
 const store = useEditorStore();
 const selectedElement = computed(() => store.selectedElement);
+
+const availableColors = [
+  { name: 'White', value: colors.palette.white },
+  { name: 'Light Gray', value: colors.palette.lightGray },
+  { name: 'Medium Gray', value: colors.palette.mediumGray },
+  { name: 'Dark Gray', value: colors.palette.darkGray },
+  { name: 'TH Red', value: colors.palette.thRed },
+  { name: 'Purple', value: colors.palette.purple },
+  { name: 'Blue', value: colors.palette.blue },
+  { name: 'Green', value: colors.palette.green },
+];
+
+function setPosterBackground(color: string) {
+  store.updatePoster({ backgroundColor: color });
+}
 
 const title = computed(() => {
   if (!selectedElement.value) return 'Eigenschaften';

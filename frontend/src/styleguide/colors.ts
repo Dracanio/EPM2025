@@ -1,19 +1,23 @@
-// Based on TH Köln Styleguide (implied/common)
+// Based on User Request
 export const colors = {
-  primary: {
-    red: '#CD1719', // TH Red
-    white: '#FFFFFF',
-    darkGray: '#333333',
-    lightGray: '#F2F2F2',
+  palette: {
+    thRed: '#dd1166', // Primary TH Color
+    purple: '#9313ce',
+    blue: '#5952e1',
+    green: '#00ad2f',
+    darkGray: '#2B2B2B',
+    mediumGray: '#aaaaaa',
+    lightGray: '#efefef',
+    white: '#ffffff'
   },
-  secondary: {
-    orange: '#E84E10',
-    purple: '#4E2B5D',
-    blue: '#005A94',
-  },
+  // Mapping to semantic roles for easier usage
+  primary: '#dd1166',
+  text: '#2B2B2B',
+  background: '#ffffff',
   ui: {
-    border: '#E5E7EB',
-    background: '#F9FAFB',
-    text: '#1F2937',
+    border: '#aaaaaa',
+    background: '#efefef',
   }
-}
+} as const;
+
+export type ColorPalette = typeof colors;
