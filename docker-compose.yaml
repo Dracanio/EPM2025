@@ -1,0 +1,44 @@
+services:
+  nginx:
+    build: ./nginx
+    depends_on:
+      - springboot
+    ports:
+      - "9150:80"
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: db_epm25_AS
+    environment:
+      POSTGRES_DB: EPM25
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  pgadmin:
+    image: elestio/pgadmin:latest
+    restart: always
+    environment:
+      PGADMIN_DEFAULT_EMAIL: andre.steurer@smail.th-koeln.de
+      PGADMIN_DEFAULT_PASSWORD: password
+      PGADMIN_LISTEN_PORT: 8080
+    ports:
+      - "9001:8080"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    depends_on:
+      - postgres
+
+  springboot:
+    build:
+      context: .
+      dockerfile: prod.Dockerfile
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+    depends_on:
+      - postgres
+
+volumes:
+  postgres-data:
+  pgadmin-data:
