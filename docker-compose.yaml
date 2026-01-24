@@ -4,13 +4,13 @@ services:
     depends_on:
       - springboot
     ports:
-      - "9150:80"
+      - "8000:80"
 
   postgres:
     image: postgres:16-alpine
     container_name: db_epm25_AS
     environment:
-      POSTGRES_DB: EPM25
+      POSTGRES_DB: EPM2025
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
     volumes:
