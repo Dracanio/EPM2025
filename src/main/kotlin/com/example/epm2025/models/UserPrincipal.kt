@@ -13,8 +13,6 @@ class UserPrincipal (private val user: User) : UserDetails {
             return  Collections.singleton(SimpleGrantedAuthority("ADMIN"))
         }else if(user.role == Role.LECTURER){
             return  Collections.singleton(SimpleGrantedAuthority("LECTURER"))
-        }else if(user.role == Role.MODERATOR){
-            return  Collections.singleton(SimpleGrantedAuthority("MODERATOR"))
         }else{
             return  Collections.singleton(SimpleGrantedAuthority("USER"))
         }
