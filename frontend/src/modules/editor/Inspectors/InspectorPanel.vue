@@ -18,6 +18,7 @@
     <div class="editor-scroll p-3">
       <TextInspector v-if="selectedElement?.type === 'text'" :element="selectedElement as TextElement" />
       <ImageInspector v-if="selectedElement?.type === 'image'" :element="selectedElement as ImageElement" />
+      <LatexInspector v-if="selectedElement?.type === 'latex'" :element="selectedElement as LatexElement" />
 
       <div v-if="!selectedElement" class="vstack gap-4">
         <div class="text-center text-secondary small fst-italic py-3">
@@ -102,7 +103,8 @@ import { useAuthStore } from '@/core/store/useAuthStore'
 import { useProjectAccessStore } from '@/core/store/useProjectAccessStore'
 import TextInspector from './TextInspector.vue'
 import ImageInspector from './ImageInspector.vue'
-import type { TextElement, ImageElement } from '@/core/models/element'
+import LatexInspector from './LatexInspector.vue'
+import type { TextElement, ImageElement, LatexElement } from '@/core/models/element'
 import type { ProjectRole } from '@/core/models/accessControl'
 import { colors } from '@/core/styleguide/colors'
 import {
@@ -156,7 +158,7 @@ const title = computed(() => {
   if (!selectedElement.value) return 'Eigenschaften'
   if (selectedElement.value.type === 'text') return 'Text bearbeiten'
   if (selectedElement.value.type === 'image') return 'Bild bearbeiten'
-  if (selectedElement.value.type === 'latex') return 'LaTeX Formel'
+  if (selectedElement.value.type === 'latex') return 'Formel bearbeiten'
   return 'Eigenschaften'
 })
 </script>

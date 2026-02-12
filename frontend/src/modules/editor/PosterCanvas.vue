@@ -49,6 +49,17 @@
             @dragend="(e: Konva.KonvaEventObject<DragEvent>) => canMoveResize && handleDragEnd(e, element.id)"
             @transformend="(e: Konva.KonvaEventObject<Event>) => canMoveResize && handleTransformEnd(e, element.id)"
           />
+
+          <!-- LaTeX Element -->
+          <v-label
+            v-if="element.type === 'latex'"
+            :config="getLatexLabelConfig(element as LatexElement)"
+            @dragend="(e: Konva.KonvaEventObject<DragEvent>) => canMoveResize && handleDragEnd(e, element.id)"
+            @transformend="(e: Konva.KonvaEventObject<Event>) => canMoveResize && handleTransformEnd(e, element.id)"
+          >
+            <v-tag :config="getLatexTagConfig()" />
+            <v-text :config="getLatexTextConfig(element as LatexElement)" />
+          </v-label>
         </template>
 
         <!-- Transformer (Only if not readOnly) -->
@@ -70,7 +81,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue';
 import { useEditorStore } from '@/core/store/useEditorStore';
-import type { TextElement, ImageElement, PosterElement } from '@/core/models/element';
+import type { TextElement, ImageElement, LatexElement, PosterElement } from '@/core/models/element';
 import Konva from 'konva';
 
 const props = defineProps<{
@@ -287,6 +298,40 @@ function getImageConfig(element: ImageElement) {
     config.dash = [5, 5];
   }
   return config;
+}
+
+function getLatexLabelConfig(element: LatexElement) {
+  return {
+    id: element.id,
+    x: mmToPx(element.xMm),
+    y: mmToPx(element.yMm),
+    rotation: element.rotationDeg,
+    draggable: canMoveResize.value && !element.locked,
+    name: 'element'
+  };
+}
+
+function getLatexTagConfig() {
+  return {
+    fill: '#f5f6fa',
+    stroke: '#d3d8e2',
+    strokeWidth: 1,
+    cornerRadius: 4
+  };
+}
+
+function getLatexTextConfig(element: LatexElement) {
+  return {
+    text: `$ ${element.latex} $`,
+    fontSize: 13 * (PIXELS_PER_MM / 2.5),
+    fontFamily: 'Monaco, Menlo, Consolas, monospace',
+    fill: '#202634',
+    width: mmToPx(element.widthMm),
+    height: mmToPx(element.heightMm),
+    align: 'left',
+    padding: 5,
+    verticalAlign: 'middle'
+  };
 }
 
 function handleStageMouseDown(e: Konva.KonvaEventObject<MouseEvent>) {

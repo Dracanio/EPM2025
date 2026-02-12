@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed } from 'vue'
-import type { ImageElement, PosterElement, TextElement } from '@/core/models/element'
+import type { ImageElement, LatexElement, PosterElement, TextElement } from '@/core/models/element'
 import type { Template } from '@/core/models/template'
 
 const props = defineProps<{
@@ -67,8 +67,13 @@ function getFormatSize(format: string | undefined) {
         >
           {{ (element as TextElement).text }}
         </div>
-        <div v-else class="template-preview-element template-preview-text" :style="getElementStyle(element)">
-          Formel
+        <div
+          v-else
+          class="template-preview-element template-preview-text template-preview-latex"
+          :style="getElementStyle(element)"
+          :data-kind="element.type"
+        >
+          ${{ (element as LatexElement).latex }}$
         </div>
       </template>
     </div>
@@ -101,6 +106,10 @@ function getFormatSize(format: string | undefined) {
 
 .template-preview-text {
   text-overflow: ellipsis;
+}
+
+.template-preview-latex {
+  font-family: Monaco, Menlo, Consolas, monospace;
 }
 
 .template-preview-fallback {

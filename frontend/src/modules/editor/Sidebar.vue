@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import { useEditorStore } from '@/core/store/useEditorStore'
-import type { TextElement, ImageElement } from '@/core/models/element'
+import type { TextElement, ImageElement, LatexElement } from '@/core/models/element'
 import type { ProjectRole } from '@/core/models/accessControl'
 import { useAuthStore } from '@/core/store/useAuthStore'
 import { useProjectAccessStore } from '@/core/store/useProjectAccessStore'
@@ -126,6 +126,23 @@ function addText() {
   editorStore.addElement(newText)
 }
 
+function addLatexFormula() {
+  if (!canAddElements.value) return
+  const formula: LatexElement = {
+    id: crypto.randomUUID(),
+    type: 'latex',
+    name: 'Formula Layer',
+    xMm: 20,
+    yMm: 140,
+    widthMm: 170,
+    heightMm: 22,
+    rotationDeg: 0,
+    locked: false,
+    latex: String.raw`\\int_0^1 x^2\\,dx = \\frac{1}{3}`
+  }
+  editorStore.addElement(formula)
+}
+
 function triggerImageUpload() {
   if (!canUploadAssets.value) return
   fileInput.value?.click()
@@ -168,7 +185,9 @@ function selectLayer(id: string) {
 }
 
 function layerTypeLabel(type: string) {
-  return type === 'image' ? 'Bild' : 'Text'
+  if (type === 'image') return 'Bild'
+  if (type === 'latex') return 'Formel'
+  return 'Text'
 }
 
 function deleteLayer(id: string) {
@@ -361,6 +380,13 @@ function onLayerDragEnd() {
               <Type v-if="canAddElements" :size="16" />
               <Lock v-else :size="14" />
               Textblock einfuegen
+            </span>
+          </button>
+          <button type="button" class="btn btn-outline-secondary text-start" :disabled="!canAddElements" @click="addLatexFormula">
+            <span class="d-flex align-items-center gap-2">
+              <Type v-if="canAddElements" :size="16" />
+              <Lock v-else :size="14" />
+              Formel einfuegen
             </span>
           </button>
           <p v-if="!canAddElements" class="small text-secondary mb-0">Deine Rolle erlaubt kein Hinzufuegen neuer Elemente.</p>

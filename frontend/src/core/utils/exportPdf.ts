@@ -5,8 +5,15 @@ import jsPDF from 'jspdf';
  * Downloads all pages of the poster as a PDF.
  * @param containerClass The class name identifying the poster pages in the print view.
  * @param filename
+ * @param pageWidthMm
+ * @param pageHeightMm
  */
-export async function downloadPdf(containerClass: string = 'poster-print-page', filename: string = 'poster.pdf') {
+export async function downloadPdf(
+  containerClass: string = 'poster-print-page',
+  filename: string = 'poster.pdf',
+  pageWidthMm: number = 210,
+  pageHeightMm: number = 297
+) {
   // We need to capture ALL elements with this class
   const elements = Array.from(document.getElementsByClassName(containerClass)) as HTMLElement[];
   
@@ -17,46 +24,41 @@ export async function downloadPdf(containerClass: string = 'poster-print-page', 
   }
 
   try {
+    const safeWidth = Number.isFinite(pageWidthMm) ? Math.max(10, pageWidthMm) : 210;
+    const safeHeight = Number.isFinite(pageHeightMm) ? Math.max(10, pageHeightMm) : 297;
+
     // Initialize PDF
     let pdf: jsPDF | null = null;
-    
-    // We assume all pages have same format for now, or we adapt per page.
-    // Let's adapt per page.
 
     for (let i = 0; i < elements.length; i++) {
         const element = elements[i];
         if (!element) continue;
-        
-        // Show the element temporarily if it's hidden (though print view should be accessible in DOM)
-        // Note: html2canvas requires the element to be in the DOM and visible. 
-        // Print elements may be hidden in screen mode.
-        // We might need to force them visible or clone them?
-        // Actually, if they are display:none, html2canvas renders nothing.
-        // Strategy: Temporarily unhide the print container for export?
-        
+
         // Capture
         const canvas = await html2canvas(element, {
-            scale: 3, // Balance quality/performance
+            scale: 4,
             useCORS: true,
             logging: false,
-            allowTaint: true,
+            allowTaint: false,
             backgroundColor: '#ffffff'
         });
 
-        const imgData = canvas.toDataURL('image/jpeg', 0.9);
-        const orientation = canvas.width > canvas.height ? 'l' : 'p';
-        
+        const imgData = canvas.toDataURL('image/png');
+
         // Create PDF on first page
         if (!pdf) {
-            pdf = new jsPDF(orientation, 'mm', 'a4');
+            pdf = new jsPDF({
+              unit: 'mm',
+              format: [safeWidth, safeHeight]
+            });
         } else {
-            pdf.addPage('a4', orientation);
+            pdf.addPage([safeWidth, safeHeight]);
         }
 
         const pdfWidth = pdf.internal.pageSize.getWidth();
         const pdfHeight = pdf.internal.pageSize.getHeight();
-        
-        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+
+        pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight, undefined, 'FAST');
     }
 
     if (pdf) {

@@ -9,15 +9,16 @@ import type { PosterFormat } from '@/core/models/poster'
 import CreateProjectModal, { type CreateProjectPayload } from './components/CreateProjectModal.vue'
 import ProjectCard from './components/ProjectCard.vue'
 import TemplatePanel from './components/TemplatePanel.vue'
+import { getBuiltInSourceTemplateItems } from './sourceTemplateLibrary'
 import {
   applyBrandKitToPoster,
   applyBrandKitToTemplate,
   BRAND_KITS,
   createMockProjects,
   FORMAT_PRESETS,
-  getTemplatesForBrandKit,
   TEMPLATE_LIBRARY_ITEMS,
   type BrandKitId,
+  type HomeTemplateItem,
   type HomeProject,
   type ProjectScope
 } from './homeData'
@@ -59,13 +60,16 @@ const templatePanelMode = ref<TemplatePanelMode>('compact')
 const showCreateModal = ref(false)
 const initialProjectName = ref('Neues Projekt')
 const projects = ref<HomeProject[]>([])
+const sourceTemplateItems = getBuiltInSourceTemplateItems()
 const isProjectsView = computed(() => route.name === 'projects')
 const isGuestSession = computed(() => authStore.isGuest || authStore.isLinkSession)
 const isAuthenticatedSession = computed(() => authStore.isAuthenticated)
 
+const allTemplateItems = computed(() => [...sourceTemplateItems, ...TEMPLATE_LIBRARY_ITEMS])
+
 const templateById = computed(() => {
-  const map = new Map<string, (typeof TEMPLATE_LIBRARY_ITEMS)[number]>()
-  for (const item of TEMPLATE_LIBRARY_ITEMS) {
+  const map = new Map<string, HomeTemplateItem>()
+  for (const item of allTemplateItems.value) {
     map.set(item.template.id, item)
   }
   return map
@@ -73,7 +77,7 @@ const templateById = computed(() => {
 
 const userFirstName = computed(() => authStore.user?.name?.split(/\s+/)[0] || 'Nutzer')
 
-const homeTemplateCandidates = computed(() => getTemplatesForBrandKit('hs_standard'))
+const homeTemplateCandidates = computed(() => allTemplateItems.value)
 const homeTemplates = computed(() => {
   if (templatePanelMode.value === 'preview') return homeTemplateCandidates.value
   return homeTemplateCandidates.value.slice(0, 3)
@@ -235,7 +239,7 @@ function createProjectFromModal(payload: CreateProjectPayload) {
   router.push(`/editor/${editorStore.activePoster.id}`)
 }
 
-function openTemplateFromHome(item: (typeof TEMPLATE_LIBRARY_ITEMS)[number]) {
+function openTemplateFromHome(item: HomeTemplateItem) {
   createProjectFromModal({
     projectName: item.template.name,
     brandKitId: item.brandKitId,
@@ -555,7 +559,7 @@ function getProjectTemplate(project: HomeProject) {
     :brand-kits="BRAND_KITS"
     default-brand-kit-id="hs_standard"
     :format-presets="FORMAT_PRESETS"
-    :templates="TEMPLATE_LIBRARY_ITEMS"
+    :templates="allTemplateItems"
     @close="closeCreateProjectModal"
     @create="createProjectFromModal"
   />

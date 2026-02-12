@@ -9,6 +9,7 @@ import { useEditorStore } from '@/core/store/useEditorStore'
 import { useAuthStore } from '@/core/store/useAuthStore'
 import { useProjectAccessStore } from '@/core/store/useProjectAccessStore'
 import { downloadPdf } from '@/core/utils/exportPdf'
+import { downloadPosterAsLatex, downloadPosterAsTypst } from '@/utils/exportLatexDto'
 import type { PosterFormat } from '@/core/models/poster'
 import type { ProjectRole } from '@/core/models/accessControl'
 import { Lock } from 'lucide-vue-next'
@@ -51,6 +52,12 @@ const canMoveAndResizeElements = computed(() => {
   return accessStore.canRolePerform(projectId, currentProjectRole.value, 'moveAndResizeElements')
 })
 
+const canExportFiles = computed(() => {
+  const projectId = store.activePoster?.id
+  if (!projectId) return true
+  return accessStore.canRolePerform(projectId, currentProjectRole.value, 'exportFiles')
+})
+
 const currentFormat = computed(() => {
   return store.activePoster?.format.split(' ')[0] || 'A4'
 })
@@ -79,22 +86,54 @@ function setOrientation(val: 'portrait' | 'landscape') {
 }
 
 function handlePrint() {
+  if (!store.activePoster) return
+  applyPrintPageSize(store.activePoster.widthMm, store.activePoster.heightMm)
   window.print()
 }
 
 const isExporting = ref(false)
+const sourceExportState = ref<'idle' | 'latex' | 'typst'>('idle')
 const saveState = ref<'idle' | 'saving' | 'saved' | 'error'>('idle')
 let autosaveTimeoutId: number | null = null
 let saveBadgeTimeoutId: number | null = null
+let printPageStyleElement: HTMLStyleElement | null = null
 
 async function handleExportPdf() {
+  if (!store.activePoster || !canExportFiles.value) return
   isExporting.value = true
   await nextTick()
 
   setTimeout(async () => {
-    await downloadPdf('poster-print-page', `${store.activePoster?.meta.title || 'poster'}.pdf`)
+    if (!store.activePoster) {
+      isExporting.value = false
+      return
+    }
+    await downloadPdf(
+      'poster-print-page',
+      `${store.activePoster.meta.title || 'poster'}.pdf`,
+      store.activePoster.widthMm,
+      store.activePoster.heightMm
+    )
     isExporting.value = false
   }, 500)
+}
+
+async function handleExportLatex() {
+  if (!store.activePoster || !canExportFiles.value) return
+  sourceExportState.value = 'latex'
+  await downloadPosterAsLatex(store.activePoster)
+  window.setTimeout(() => {
+    if (sourceExportState.value === 'latex') sourceExportState.value = 'idle'
+  }, 450)
+}
+
+function handleExportTypst() {
+  if (!store.activePoster || !canExportFiles.value) return
+  sourceExportState.value = 'typst'
+  downloadPosterAsTypst(store.activePoster)
+  window.setTimeout(() => {
+    if (sourceExportState.value === 'typst') sourceExportState.value = 'idle'
+  }, 450)
 }
 
 function ensureProjectAccess(projectId: string) {
@@ -174,6 +213,30 @@ function clearSaveTimers() {
   }
 }
 
+function clearPrintPageSize() {
+  if (!printPageStyleElement) return
+  printPageStyleElement.remove()
+  printPageStyleElement = null
+}
+
+function applyPrintPageSize(widthMm: number, heightMm: number) {
+  clearPrintPageSize()
+
+  const safeWidth = Number.isFinite(widthMm) ? Math.max(10, widthMm) : 210
+  const safeHeight = Number.isFinite(heightMm) ? Math.max(10, heightMm) : 297
+  const style = document.createElement('style')
+  style.setAttribute('data-print-size', 'poster')
+  style.textContent = `@media print { @page { size: ${safeWidth}mm ${safeHeight}mm; margin: 0; } }`
+  document.head.appendChild(style)
+  printPageStyleElement = style
+
+  const cleanup = () => {
+    clearPrintPageSize()
+    window.removeEventListener('afterprint', cleanup)
+  }
+  window.addEventListener('afterprint', cleanup)
+}
+
 function setSavedBadge() {
   saveState.value = 'saved'
   if (saveBadgeTimeoutId !== null) window.clearTimeout(saveBadgeTimeoutId)
@@ -231,6 +294,7 @@ onBeforeUnmount(() => {
     store.saveActivePoster()
   }
   clearSaveTimers()
+  clearPrintPageSize()
 })
 
 function goLoginFromShared() {
@@ -359,13 +423,35 @@ function goLoginFromShared() {
               <button type="button" class="btn btn-outline-secondary" @click="store.zoomIn()">+</button>
             </div>
 
-            <button type="button" class="btn btn-outline-secondary btn-sm" @click="handleExportPdf">
+            <button type="button" class="btn btn-outline-secondary btn-sm" :disabled="!canExportFiles" @click="handleExportPdf">
               <span v-if="isExporting">Exporting...</span>
               <span v-else>PDF Export</span>
+            </button>
+            <button
+              type="button"
+              class="btn btn-outline-secondary btn-sm"
+              :disabled="!canExportFiles || sourceExportState === 'typst'"
+              @click="handleExportLatex"
+            >
+              <span v-if="sourceExportState === 'latex'">Exporting...</span>
+              <span v-else>LaTeX</span>
+            </button>
+            <button
+              type="button"
+              class="btn btn-outline-secondary btn-sm"
+              :disabled="!canExportFiles || sourceExportState === 'latex'"
+              @click="handleExportTypst"
+            >
+              <span v-if="sourceExportState === 'typst'">Exporting...</span>
+              <span v-else>Typst</span>
             </button>
 
             <button type="button" class="btn btn-dark btn-sm" @click="handlePrint">Drucken</button>
           </div>
+        </div>
+        <div v-if="!canExportFiles" class="small text-secondary fw-semibold mt-2 d-inline-flex align-items-center gap-1">
+          <Lock :size="13" />
+          Export ist fuer deine Rolle deaktiviert.
         </div>
       </header>
 
@@ -388,7 +474,15 @@ function goLoginFromShared() {
       </div>
 
       <div class="editor-export-layer" :class="{ 'is-exporting': isExporting }">
-        <div v-for="page in store.activePoster?.pages" :key="page.id" class="poster-print-page">
+        <div
+          v-for="page in store.activePoster?.pages"
+          :key="page.id"
+          class="poster-print-page"
+          :style="{
+            width: `${store.activePoster?.widthMm || 210}mm`,
+            height: `${store.activePoster?.heightMm || 297}mm`
+          }"
+        >
           <PosterCanvas
             :elements="page.elements"
             :widthMm="store.activePoster?.widthMm"

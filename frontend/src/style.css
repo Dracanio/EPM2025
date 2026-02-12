@@ -331,10 +331,11 @@ a {
 @media print {
   @page {
     margin: 0;
-    size: auto;
   }
 
+  html,
   body {
+    margin: 0;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
     background: #ffffff;
@@ -359,14 +360,19 @@ a {
     pointer-events: auto !important;
   }
 
-  #poster-stage-container {
+  .poster-stage-shell {
     box-shadow: none !important;
     margin: 0 auto;
   }
 
   .poster-print-page {
-    margin-bottom: 2rem;
+    margin: 0;
+    overflow: hidden;
     break-after: page;
+  }
+
+  .poster-print-page:last-child {
+    break-after: auto;
   }
 
   ::-webkit-scrollbar {

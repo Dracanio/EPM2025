@@ -36,7 +36,8 @@ function createDefaultEditorPermissions(): EditorPermissionState {
     addNewElements: false,
     uploadOwnAssets: true,
     deleteElements: false,
-    managePages: false
+    managePages: false,
+    exportFiles: true
   }
 }
 

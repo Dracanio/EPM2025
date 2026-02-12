@@ -13,6 +13,7 @@ export type EditorPermissionKey =
   | 'uploadOwnAssets'
   | 'deleteElements'
   | 'managePages'
+  | 'exportFiles'
 
 export interface TeamMember {
   id: string
@@ -111,5 +112,11 @@ export const EDITOR_PERMISSION_DEFINITIONS: EditorPermissionDefinition[] = [
     category: 'project',
     title: 'Seiten verwalten',
     description: 'Editoren duerfen Seiten hinzufuegen und loeschen.'
+  },
+  {
+    key: 'exportFiles',
+    category: 'project',
+    title: 'Dateien exportieren',
+    description: 'Editoren duerfen PDF, LaTeX und Typst Dateien exportieren.'
   }
 ]

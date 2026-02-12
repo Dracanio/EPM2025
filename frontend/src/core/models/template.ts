@@ -1,6 +1,13 @@
 import type { PosterFormat } from './poster';
 import type { PosterElement } from './element';
 
+export interface TemplateSource {
+  type: 'latex' | 'typst';
+  content: string;
+  fileName?: string;
+  importedAt?: string;
+}
+
 export interface AllowedZone {
   role: 'title' | 'text' | 'image' | 'logo';
   xMm: number;
@@ -17,4 +24,5 @@ export interface Template {
   allowedZones: AllowedZone[];
   pages: { elements: PosterElement[] }[]; // Changed to pages
   thumbnail?: string; // Optional URL or base64 for preview
+  source?: TemplateSource;
 }
