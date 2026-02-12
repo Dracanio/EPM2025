@@ -2,10 +2,15 @@
 import { computed, ref } from 'vue'
 import { useEditorStore } from '@/core/store/useEditorStore'
 import type { TextElement, ImageElement } from '@/core/models/element'
+import type { ProjectRole } from '@/core/models/accessControl'
+import { useAuthStore } from '@/core/store/useAuthStore'
+import { useProjectAccessStore } from '@/core/store/useProjectAccessStore'
 import { GripVertical, Heading1, Image, Layers, Settings2, Trash2, Type } from 'lucide-vue-next'
 import ProjectSettingsPanel from './settings/ProjectSettingsPanel.vue'
 
 const editorStore = useEditorStore()
+const authStore = useAuthStore()
+const accessStore = useProjectAccessStore()
 
 type PanelState = 'layers' | 'text' | 'image' | 'settings'
 
@@ -25,7 +30,30 @@ const layers = computed(() => {
   return [...editorStore.currentElements].reverse()
 })
 
+const activeProjectId = computed(() => editorStore.activePoster?.id || '')
+const currentProjectRole = computed<ProjectRole>(() => {
+  if (authStore.isLinkSession) return authStore.linkSession?.role || 'viewer'
+  const resolved = accessStore.resolveProjectRole(activeProjectId.value, authStore.user?.id, authStore.user?.email)
+  return resolved || 'owner'
+})
+
+const canAddElements = computed(() => {
+  if (!activeProjectId.value) return true
+  return accessStore.canRolePerform(activeProjectId.value, currentProjectRole.value, 'addNewElements')
+})
+
+const canUploadAssets = computed(() => {
+  if (!activeProjectId.value) return true
+  return accessStore.canRolePerform(activeProjectId.value, currentProjectRole.value, 'uploadOwnAssets')
+})
+
+const canDeleteElements = computed(() => {
+  if (!activeProjectId.value) return true
+  return accessStore.canRolePerform(activeProjectId.value, currentProjectRole.value, 'deleteElements')
+})
+
 function addTitle() {
+  if (!canAddElements.value) return
   const newTitle: TextElement = {
     id: crypto.randomUUID(),
     type: 'text',
@@ -50,6 +78,7 @@ function addTitle() {
 }
 
 function addText() {
+  if (!canAddElements.value) return
   const newText: TextElement = {
     id: crypto.randomUUID(),
     type: 'text',
@@ -74,6 +103,7 @@ function addText() {
 }
 
 function triggerImageUpload() {
+  if (!canUploadAssets.value) return
   fileInput.value?.click()
 }
 
@@ -118,6 +148,7 @@ function layerTypeLabel(type: string) {
 }
 
 function deleteLayer(id: string) {
+  if (!canDeleteElements.value) return
   editorStore.deleteElement(id)
 }
 
@@ -260,6 +291,7 @@ function onLayerDragEnd() {
               type="button"
               class="btn btn-outline-danger btn-sm sidebar-layer-delete"
               title="Element loeschen"
+              :disabled="!canDeleteElements"
               @click.stop="deleteLayer(element.id)"
             >
               <Trash2 :size="14" />
@@ -272,28 +304,31 @@ function onLayerDragEnd() {
         </div>
 
         <div v-else-if="activePanel === 'text'" class="vstack gap-2">
-          <button type="button" class="btn btn-outline-secondary text-start" @click="addTitle">
+          <button type="button" class="btn btn-outline-secondary text-start" :disabled="!canAddElements" @click="addTitle">
             <span class="d-flex align-items-center gap-2">
               <Heading1 :size="16" />
               Titel einfuegen
             </span>
           </button>
-          <button type="button" class="btn btn-outline-secondary text-start" @click="addText">
+          <button type="button" class="btn btn-outline-secondary text-start" :disabled="!canAddElements" @click="addText">
             <span class="d-flex align-items-center gap-2">
               <Type :size="16" />
               Textblock einfuegen
             </span>
           </button>
+          <p v-if="!canAddElements" class="small text-secondary mb-0">Deine Rolle erlaubt kein Hinzufuegen neuer Elemente.</p>
         </div>
 
         <div v-else-if="activePanel === 'image'" class="vstack gap-2">
-          <button type="button" class="btn btn-outline-secondary text-start" @click="triggerImageUpload">
+          <button type="button" class="btn btn-outline-secondary text-start" :disabled="!canUploadAssets" @click="triggerImageUpload">
             <span class="d-flex align-items-center gap-2">
               <Image :size="16" />
               Bild hochladen
             </span>
           </button>
-          <p class="small text-secondary mb-0">Neue Bilder werden als eigene Ebene hinzugefuegt.</p>
+          <p class="small text-secondary mb-0">
+            {{ canUploadAssets ? 'Neue Bilder werden als eigene Ebene hinzugefuegt.' : 'Upload ist fuer deine Rolle deaktiviert.' }}
+          </p>
         </div>
 
         <ProjectSettingsPanel v-else />

@@ -1,4 +1,5 @@
 export type ProjectRole = 'owner' | 'editor' | 'viewer'
+export type ShareLinkRole = Extract<ProjectRole, 'editor' | 'viewer'>
 
 export type EditorPermissionCategory = 'content' | 'assets' | 'project'
 
@@ -38,6 +39,16 @@ export interface ProjectAccessSettings {
   projectId: string
   members: TeamMember[]
   editorPermissions: EditorPermissionState
+  shareLinks: ShareLink[]
+  updatedAt: string
+}
+
+export interface ShareLink {
+  id: string
+  token: string
+  role: ShareLinkRole
+  isActive: boolean
+  createdAt: string
   updatedAt: string
 }
 
@@ -91,4 +102,3 @@ export const EDITOR_PERMISSION_DEFINITIONS: EditorPermissionDefinition[] = [
     description: 'Editoren duerfen Seiten hinzufuegen und loeschen.'
   }
 ]
-

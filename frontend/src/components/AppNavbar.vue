@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ChevronDown, ChevronLeft, ChevronRight, House } from 'lucide-vue-next'
+import { ChevronDown, ChevronLeft, ChevronRight, House, LogIn, User } from 'lucide-vue-next'
 import { useAuthStore } from '@/core/store/useAuthStore'
 
 type NavSection = 'templates' | 'projects' | 'editor'
@@ -47,6 +47,8 @@ const resolvedContextLabel = computed(() => {
 
 const canGoBack = computed(() => Boolean(historyState.value.back) || (historyState.value.position ?? 0) > 0)
 const canGoForward = computed(() => Boolean(historyState.value.forward))
+const showUserMenu = computed(() => authStore.showProfileMenu)
+const isGuest = computed(() => authStore.isGuest || authStore.isLinkSession)
 
 function syncHistoryState() {
   historyState.value = (window.history.state as RouterHistoryState | null) || {}
@@ -95,6 +97,15 @@ function onGlobalKeydown(event: KeyboardEvent) {
 function logout() {
   closeUserMenu()
   authStore.logout()
+  router.push('/login')
+}
+
+function openProfile() {
+  closeUserMenu()
+  router.push('/profile')
+}
+
+function openLogin() {
   router.push('/login')
 }
 
@@ -154,7 +165,7 @@ watch(
           <slot name="actions" />
           <span class="app-navbar-context-chip" :class="`is-${props.activeSection}`">{{ resolvedContextLabel }}</span>
 
-          <div ref="userMenuRef" class="app-navbar-user" @click.stop>
+          <div v-if="showUserMenu" ref="userMenuRef" class="app-navbar-user" @click.stop>
             <button
               type="button"
               class="btn btn-light border app-navbar-user-trigger"
@@ -169,12 +180,25 @@ watch(
               <div class="card-body p-3">
                 <p class="fw-semibold mb-1">{{ userDisplayName }}</p>
                 <p class="small text-secondary mb-3">{{ authStore.user?.email || 'Nicht angemeldet' }}</p>
+                <button type="button" class="btn btn-outline-secondary btn-sm w-100 mb-2" @click="openProfile">
+                  <span class="d-inline-flex align-items-center gap-1">
+                    <User :size="14" />
+                    Profil
+                  </span>
+                </button>
                 <button type="button" class="btn btn-outline-secondary btn-sm w-100" @click="logout">
                   Abmelden
                 </button>
               </div>
             </div>
           </div>
+
+          <button v-else-if="isGuest" type="button" class="btn btn-outline-secondary btn-sm" @click="openLogin">
+            <span class="d-inline-flex align-items-center gap-1">
+              <LogIn :size="14" />
+              Login
+            </span>
+          </button>
         </div>
       </div>
     </div>

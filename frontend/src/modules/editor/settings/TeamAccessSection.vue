@@ -1,21 +1,28 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { InviteTeamMemberInput, ProjectRole, TeamMember } from '@/core/models/accessControl'
-import { Plus, ShieldCheck } from 'lucide-vue-next'
+import type { InviteTeamMemberInput, ProjectRole, ShareLink, ShareLinkRole, TeamMember } from '@/core/models/accessControl'
+import { Copy, Link2, Plus, ShieldCheck } from 'lucide-vue-next'
 
 const props = defineProps<{
   members: TeamMember[]
+  shareLinks: ShareLink[]
 }>()
 
 const emit = defineEmits<{
   (e: 'add-member', payload: InviteTeamMemberInput): void
   (e: 'update-role', payload: { memberId: string; role: ProjectRole }): void
+  (e: 'create-share-link', payload: { role: ShareLinkRole }): void
+  (e: 'update-share-link-role', payload: { linkId: string; role: ShareLinkRole }): void
+  (e: 'toggle-share-link', payload: { linkId: string; enabled: boolean }): void
 }>()
 
 const newMemberName = ref('')
 const newMemberEmail = ref('')
 const newMemberRole = ref<InviteTeamMemberInput['role']>('editor')
 const inviteError = ref('')
+
+const newLinkRole = ref<ShareLinkRole>('viewer')
+const copiedLinkId = ref<string | null>(null)
 
 const ownerMember = computed(() => props.members.find((member) => member.role === 'owner'))
 const managedMembers = computed(() => props.members.filter((member) => member.role !== 'owner'))
@@ -66,6 +73,41 @@ function onRoleChange(memberId: string, event: Event) {
   const nextRole = (event.target as HTMLSelectElement).value as ProjectRole
   emit('update-role', { memberId, role: nextRole })
 }
+
+function createShareLink() {
+  emit('create-share-link', {
+    role: newLinkRole.value
+  })
+}
+
+function linkUrl(token: string) {
+  return `${window.location.origin}/shared/${token}`
+}
+
+async function copyLink(linkId: string, token: string) {
+  const value = linkUrl(token)
+  try {
+    await navigator.clipboard.writeText(value)
+    copiedLinkId.value = linkId
+    setTimeout(() => {
+      if (copiedLinkId.value === linkId) copiedLinkId.value = null
+    }, 1300)
+  } catch {
+    copiedLinkId.value = null
+  }
+}
+
+function updateShareRole(linkId: string, event: Event) {
+  const role = (event.target as HTMLSelectElement).value as ShareLinkRole
+  emit('update-share-link-role', { linkId, role })
+}
+
+function toggleShare(linkId: string, event: Event) {
+  emit('toggle-share-link', {
+    linkId,
+    enabled: (event.target as HTMLInputElement).checked
+  })
+}
 </script>
 
 <template>
@@ -79,17 +121,21 @@ function onRoleChange(memberId: string, event: Event) {
       <div class="col-12">
         <input v-model="newMemberName" type="text" class="form-control form-control-sm" placeholder="Name des Mitglieds" />
       </div>
-      <div class="col-12 col-md-7">
+      <div class="col-12">
         <input v-model="newMemberEmail" type="email" class="form-control form-control-sm" placeholder="mitglied@beispiel.de" />
       </div>
-      <div class="col-8 col-md-3">
+      <div class="col-7">
         <select v-model="newMemberRole" class="form-select form-select-sm">
           <option value="editor">Editor</option>
           <option value="viewer">Viewer</option>
         </select>
       </div>
-      <div class="col-4 col-md-2">
-        <button type="button" class="btn btn-primary btn-sm w-100 d-inline-flex align-items-center justify-content-center gap-1" @click="submitMember">
+      <div class="col-5">
+        <button
+          type="button"
+          class="btn btn-primary btn-sm w-100 d-inline-flex align-items-center justify-content-center gap-1"
+          @click="submitMember"
+        >
           <Plus :size="14" />
           Hinzu
         </button>
@@ -99,7 +145,7 @@ function onRoleChange(memberId: string, event: Event) {
       </div>
     </div>
 
-    <div class="vstack gap-2">
+    <div class="vstack gap-2 mb-3">
       <article v-if="ownerMember" class="member-row">
         <div class="member-avatar">{{ initialsFor(ownerMember.name) }}</div>
         <div class="member-info">
@@ -128,6 +174,53 @@ function onRoleChange(memberId: string, event: Event) {
         </select>
       </article>
     </div>
+
+    <div class="share-links border rounded-3 p-2">
+      <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
+        <p class="mb-0 fw-semibold">Freigabe-Links</p>
+        <span class="small text-secondary">{{ shareLinks.length }} aktiv/inaktiv</span>
+      </div>
+
+      <div class="row g-2 mb-2">
+        <div class="col-7">
+          <select v-model="newLinkRole" class="form-select form-select-sm">
+            <option value="viewer">Link: Nur ansehen</option>
+            <option value="editor">Link: Bearbeiten</option>
+          </select>
+        </div>
+        <div class="col-5">
+          <button type="button" class="btn btn-outline-secondary btn-sm w-100 d-inline-flex align-items-center justify-content-center gap-1" @click="createShareLink">
+            <Link2 :size="14" />
+            Erstellen
+          </button>
+        </div>
+      </div>
+
+      <div v-if="shareLinks.length === 0" class="small text-secondary">Noch kein Link erstellt.</div>
+
+      <div v-else class="vstack gap-2">
+        <article v-for="link in shareLinks" :key="link.id" class="share-link-row">
+          <div class="input-group input-group-sm mb-2">
+            <input type="text" class="form-control" :value="linkUrl(link.token)" readonly />
+            <button type="button" class="btn btn-outline-secondary" @click="copyLink(link.id, link.token)">
+              <Copy :size="14" />
+            </button>
+          </div>
+
+          <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
+            <select class="form-select form-select-sm share-role-select" :value="link.role" @change="updateShareRole(link.id, $event)">
+              <option value="viewer">Viewer Link</option>
+              <option value="editor">Editor Link</option>
+            </select>
+
+            <div class="form-check form-switch m-0">
+              <input class="form-check-input" type="checkbox" :checked="link.isActive" @change="toggleShare(link.id, $event)" />
+            </div>
+          </div>
+          <p v-if="copiedLinkId === link.id" class="small text-success mb-0 mt-1">Link kopiert.</p>
+        </article>
+      </div>
+    </div>
   </section>
 </template>
 
@@ -143,9 +236,9 @@ function onRoleChange(memberId: string, event: Event) {
 }
 
 .member-row {
-  display: flex;
-  align-items: center;
-  gap: 0.7rem;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.6rem;
   border: 1px solid var(--panel-border);
   border-radius: 0.85rem;
   padding: 0.55rem 0.65rem;
@@ -167,17 +260,16 @@ function onRoleChange(memberId: string, event: Event) {
 }
 
 .member-info {
-  flex: 1;
   min-width: 0;
 }
 
 .member-name {
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 600;
 }
 
 .member-mail {
-  font-size: 0.83rem;
+  font-size: 0.8rem;
   color: var(--text-muted);
   white-space: nowrap;
   overflow: hidden;
@@ -185,20 +277,38 @@ function onRoleChange(memberId: string, event: Event) {
 }
 
 .member-role-select {
-  width: 110px;
-  flex-shrink: 0;
+  grid-column: 1 / -1;
+  width: 100%;
 }
 
 .role-badge {
   border-radius: 999px;
   font-size: 0.72rem;
   padding: 0.3rem 0.55rem;
+  grid-column: 1 / -1;
+  width: fit-content;
 }
 
 .role-badge-owner {
   background: #eef3ff;
   color: #2a4ca0;
   border: 1px solid #cedbff;
+}
+
+.share-links {
+  border-color: var(--panel-border) !important;
+  background: #f8fafc;
+}
+
+.share-link-row {
+  border: 1px solid var(--panel-border);
+  border-radius: 0.75rem;
+  padding: 0.5rem;
+  background: #ffffff;
+}
+
+.share-role-select {
+  width: 160px;
 }
 </style>
 

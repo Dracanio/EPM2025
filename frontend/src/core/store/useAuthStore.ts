@@ -1,54 +1,176 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
+import type { ShareLinkRole } from '@/core/models/accessControl'
+
+type SessionMode = 'anonymous' | 'authenticated' | 'guest' | 'link'
 
 interface User {
   id: string
   name: string
   email: string
   role: 'admin' | 'editor' | 'viewer'
+  avatarUrl?: string
+}
+
+interface LinkSession {
+  token: string
+  role: ShareLinkRole
+  projectId: string
+}
+
+interface StoredSession {
+  sessionMode: SessionMode
+  token: string | null
+  user: User | null
+  linkSession: LinkSession | null
+}
+
+const AUTH_STORAGE_KEY = 'poster_designer_auth_session_v1'
+
+function readStoredSession(): StoredSession | null {
+  if (typeof window === 'undefined') return null
+  const raw = window.localStorage.getItem(AUTH_STORAGE_KEY)
+  if (!raw) return null
+
+  try {
+    const parsed = JSON.parse(raw) as Partial<StoredSession>
+    const sessionMode = parsed.sessionMode
+    const validSessionMode =
+      sessionMode === 'anonymous' || sessionMode === 'authenticated' || sessionMode === 'guest' || sessionMode === 'link'
+    if (!validSessionMode) return null
+
+    return {
+      sessionMode,
+      token: typeof parsed.token === 'string' ? parsed.token : null,
+      user: parsed.user && typeof parsed.user === 'object' ? (parsed.user as User) : null,
+      linkSession:
+        parsed.linkSession && typeof parsed.linkSession === 'object'
+          ? (parsed.linkSession as LinkSession)
+          : null
+    }
+  } catch {
+    return null
+  }
 }
 
 export const useAuthStore = defineStore('auth', () => {
-    
-  // State
-  const user = ref<User | null>(null)
-  const token = ref<string | null>(null)
+  const stored = readStoredSession()
 
-  // Getters
-  const isAuthenticated = computed(() => !!token.value)
+  const user = ref<User | null>(stored?.user || null)
+  const token = ref<string | null>(stored?.token || null)
+  const sessionMode = ref<SessionMode>(stored?.sessionMode || 'anonymous')
+  const linkSession = ref<LinkSession | null>(stored?.linkSession || null)
+
+  const isAuthenticated = computed(() => sessionMode.value === 'authenticated' && !!token.value)
+  const isGuest = computed(() => sessionMode.value === 'guest')
+  const isLinkSession = computed(() => sessionMode.value === 'link' && !!linkSession.value)
   const userRole = computed(() => user.value?.role)
+  const canAccessLibrary = computed(() => isAuthenticated.value || isGuest.value)
+  const showProfileMenu = computed(() => isAuthenticated.value)
 
-  // Actions
-  function login(email: string) {
-    // MOCK LOGIN LOGIC
-    // In production, this would call an API
-    
-    // Simulate API delay
-    setTimeout(() => {
-        token.value = 'mock-jwt-token-' + Date.now()
-        user.value = {
-            id: 'u-123',
-            name: 'Test Artist',
-            email: email,
-            role: 'editor' // Default role for mock
-        }
-    }, 100)
-    
+  function persist() {
+    if (typeof window === 'undefined') return
+    const snapshot: StoredSession = {
+      sessionMode: sessionMode.value,
+      token: token.value,
+      user: user.value,
+      linkSession: linkSession.value
+    }
+    window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(snapshot))
+  }
+
+  function setAnonymous() {
+    sessionMode.value = 'anonymous'
+    token.value = null
+    user.value = null
+    linkSession.value = null
+    persist()
+  }
+
+  function continueAsGuest() {
+    sessionMode.value = 'guest'
+    token.value = null
+    user.value = null
+    linkSession.value = null
+    persist()
+  }
+
+  function enterLinkSession(payload: LinkSession) {
+    sessionMode.value = 'link'
+    token.value = null
+    user.value = null
+    linkSession.value = payload
+    persist()
+  }
+
+  function clearLinkSession() {
+    if (sessionMode.value !== 'link') return
+    setAnonymous()
+  }
+
+  async function login(email: string, password?: string) {
+    if (!email || !password) return Promise.reject(new Error('Email and password are required'))
+
+    token.value = 'mock-jwt-token-' + Date.now()
+    user.value = {
+      id: 'u-' + Math.round(Math.random() * 100000).toString(),
+      name: email.split('@')[0] || 'Poster User',
+      email,
+      role: 'editor'
+    }
+    sessionMode.value = 'authenticated'
+    linkSession.value = null
+    persist()
     return Promise.resolve()
   }
 
+  async function register(name: string, email: string, password: string) {
+    if (!name || !email || !password) return Promise.reject(new Error('Missing registration fields'))
+    token.value = 'mock-jwt-token-' + Date.now()
+    user.value = {
+      id: 'u-' + Math.round(Math.random() * 100000).toString(),
+      name,
+      email,
+      role: 'editor'
+    }
+    sessionMode.value = 'authenticated'
+    linkSession.value = null
+    persist()
+    return Promise.resolve()
+  }
+
+  function updateProfile(partial: Partial<Pick<User, 'name' | 'email' | 'avatarUrl'>>) {
+    if (!user.value) return
+    user.value = {
+      ...user.value,
+      ...partial
+    }
+    persist()
+  }
+
   function logout() {
-    user.value = null
-    token.value = null
-    // Router push should be handled by comp or here if router instance available
+    setAnonymous()
   }
 
   return {
     user,
     token,
+    sessionMode,
+    linkSession,
     isAuthenticated,
+    isGuest,
+    isLinkSession,
     userRole,
+    canAccessLibrary,
+    showProfileMenu,
     login,
+    register,
+    continueAsGuest,
+    enterLinkSession,
+    clearLinkSession,
+    updateProfile,
+    setAnonymous,
     logout
   }
 })
+

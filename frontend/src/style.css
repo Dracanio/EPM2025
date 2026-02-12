@@ -18,7 +18,7 @@
   --text-muted: #68607a;
   --app-navbar-height: 76px;
   --editor-topbar-height: 72px;
-  --editor-left-width: 320px;
+  --editor-left-width: 360px;
   --editor-right-width: 320px;
 
   --bs-primary: var(--color-brand-primary);
@@ -281,7 +281,7 @@ a {
 
 @media (max-width: 1199px) {
   :root {
-    --editor-left-width: 300px;
+    --editor-left-width: 320px;
     --editor-right-width: 300px;
   }
 }

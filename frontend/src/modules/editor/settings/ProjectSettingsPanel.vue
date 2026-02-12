@@ -3,7 +3,7 @@ import { computed, watch } from 'vue'
 import { useAuthStore } from '@/core/store/useAuthStore'
 import { useEditorStore } from '@/core/store/useEditorStore'
 import { useProjectAccessStore } from '@/core/store/useProjectAccessStore'
-import type { EditorPermissionKey, InviteTeamMemberInput, ProjectRole } from '@/core/models/accessControl'
+import type { EditorPermissionKey, InviteTeamMemberInput, ProjectRole, ShareLinkRole } from '@/core/models/accessControl'
 import TeamAccessSection from './TeamAccessSection.vue'
 import EditorPermissionsSection from './EditorPermissionsSection.vue'
 
@@ -47,6 +47,21 @@ function togglePermission(payload: { permissionKey: EditorPermissionKey; enabled
   if (!activeProjectId.value || !projectAccess.value) return
   accessStore.toggleEditorPermission(activeProjectId.value, payload.permissionKey, payload.enabled)
 }
+
+function createShareLink(payload: { role: ShareLinkRole }) {
+  if (!activeProjectId.value) return
+  accessStore.createShareLink(activeProjectId.value, payload.role)
+}
+
+function updateShareLinkRole(payload: { linkId: string; role: ShareLinkRole }) {
+  if (!activeProjectId.value) return
+  accessStore.updateShareLinkRole(activeProjectId.value, payload.linkId, payload.role)
+}
+
+function toggleShareLink(payload: { linkId: string; enabled: boolean }) {
+  if (!activeProjectId.value) return
+  accessStore.toggleShareLink(activeProjectId.value, payload.linkId, payload.enabled)
+}
 </script>
 
 <template>
@@ -62,8 +77,12 @@ function togglePermission(payload: { permissionKey: EditorPermissionKey; enabled
     <TeamAccessSection
       v-if="projectAccess"
       :members="projectAccess.members"
+      :share-links="projectAccess.shareLinks"
       @add-member="addMember"
       @update-role="updateRole"
+      @create-share-link="createShareLink"
+      @update-share-link-role="updateShareLinkRole"
+      @toggle-share-link="toggleShareLink"
     />
 
     <EditorPermissionsSection

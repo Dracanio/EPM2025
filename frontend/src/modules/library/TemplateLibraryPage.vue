@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { Plus } from 'lucide-vue-next'
 import AppNavbar from '@/components/AppNavbar.vue'
@@ -26,7 +26,7 @@ type ProjectSort = 'recent' | 'oldest' | 'name'
 type ProjectLayout = 'grid' | 'list'
 type TemplatePanelMode = 'compact' | 'preview'
 
-const HOME_PROJECTS_KEY = 'poster_studio_home_projects'
+const HOME_PROJECTS_KEY = 'poster_designer_home_projects'
 const HOME_PROJECTS_LIMIT = 6
 
 const USE_MOCK_HOME_DATA =
@@ -58,8 +58,10 @@ const projectLayout = ref<ProjectLayout>('grid')
 const templatePanelMode = ref<TemplatePanelMode>('compact')
 const showCreateModal = ref(false)
 const initialProjectName = ref('Neues Projekt')
-const projects = ref<HomeProject[]>(loadProjects())
+const projects = ref<HomeProject[]>([])
 const isProjectsView = computed(() => route.name === 'projects')
+const isGuestSession = computed(() => authStore.isGuest || authStore.isLinkSession)
+const isAuthenticatedSession = computed(() => authStore.isAuthenticated)
 
 const templateById = computed(() => {
   const map = new Map<string, (typeof TEMPLATE_LIBRARY_ITEMS)[number]>()
@@ -95,7 +97,24 @@ const sortedProjects = computed(() => {
 
 const homeProjects = computed(() => sortedProjects.value.slice(0, HOME_PROJECTS_LIMIT))
 
+watch(
+  () => [authStore.sessionMode, authStore.user?.id, route.name],
+  () => {
+    projects.value = loadProjects()
+    if (isGuestSession.value && route.name === 'projects') {
+      router.replace('/templates')
+    }
+  },
+  { immediate: true }
+)
+
+function getProjectsStorageKey() {
+  if (!isAuthenticatedSession.value || !authStore.user?.id) return null
+  return `${HOME_PROJECTS_KEY}_${authStore.user.id}`
+}
+
 function loadProjects(): HomeProject[] {
+  if (!isAuthenticatedSession.value) return []
   const storedProjects = readStoredProjects()
   if (storedProjects.length > 0) return storedProjects
   if (!USE_MOCK_HOME_DATA) return []
@@ -106,7 +125,10 @@ function loadProjects(): HomeProject[] {
 }
 
 function readStoredProjects(): HomeProject[] {
-  const raw = window.localStorage.getItem(HOME_PROJECTS_KEY)
+  const storageKey = getProjectsStorageKey()
+  if (!storageKey) return []
+
+  const raw = window.localStorage.getItem(storageKey)
   if (!raw) return []
 
   try {
@@ -156,7 +178,9 @@ function isPosterFormat(value: unknown): value is PosterFormat {
 }
 
 function writeStoredProjects(entries: HomeProject[]) {
-  window.localStorage.setItem(HOME_PROJECTS_KEY, JSON.stringify(entries))
+  const storageKey = getProjectsStorageKey()
+  if (!storageKey) return
+  window.localStorage.setItem(storageKey, JSON.stringify(entries))
 }
 
 function upsertProject(project: HomeProject) {
@@ -258,6 +282,7 @@ function deleteProject(project: HomeProject) {
 }
 
 function showAllProjects() {
+  if (isGuestSession.value) return
   router.push('/projects')
 }
 
@@ -291,6 +316,9 @@ function getProjectTemplate(project: HomeProject) {
   <div class="home-shell min-vh-100">
     <AppNavbar :active-section="isProjectsView ? 'projects' : 'templates'">
       <template #actions>
+        <button v-if="isGuestSession" type="button" class="btn btn-outline-secondary px-3" @click="router.push('/login')">
+          Anmelden
+        </button>
         <button type="button" class="btn btn-primary px-3 d-inline-flex align-items-center gap-2 home-create-btn" @click="openCreateProjectModal()">
           <Plus :size="16" />
           <span>Neues Projekt</span>
@@ -299,7 +327,7 @@ function getProjectTemplate(project: HomeProject) {
     </AppNavbar>
 
     <main class="container-fluid px-3 px-lg-4 py-4 py-lg-5">
-      <section v-if="!isProjectsView">
+      <section v-if="!isProjectsView && !isGuestSession">
         <header class="mb-4">
           <h1 class="home-main-title mb-1">Willkommen zurück, {{ userFirstName }}</h1>
           <p class="text-secondary mb-0">{{ copy.welcomeSubtitle }}</p>
@@ -352,6 +380,30 @@ function getProjectTemplate(project: HomeProject) {
               :subtitle="copy.templatesSubtitle"
               :mode="templatePanelMode"
               :templates="homeTemplates"
+              :empty-title="copy.noTemplatesTitle"
+              :empty-body="copy.noTemplatesBody"
+              @toggle-mode="toggleTemplatePanel"
+              @open-template="openTemplateFromHome"
+            />
+          </div>
+        </div>
+      </section>
+
+      <section v-else-if="!isProjectsView && isGuestSession">
+        <header class="mb-4">
+          <h1 class="home-main-title mb-1">Vorlagen fuer den Gastmodus</h1>
+          <p class="text-secondary mb-0">
+            Du arbeitest ohne Account. Es werden keine persoenlichen Projekte und keine Historie angezeigt.
+          </p>
+        </header>
+
+        <div class="row g-4">
+          <div class="col-12 col-xl-10 col-xxl-8">
+            <TemplatePanel
+              :title="copy.templatesTitle"
+              :subtitle="copy.templatesSubtitle"
+              mode="preview"
+              :templates="homeTemplateCandidates"
               :empty-title="copy.noTemplatesTitle"
               :empty-body="copy.noTemplatesBody"
               @toggle-mode="toggleTemplatePanel"
