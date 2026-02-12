@@ -3,8 +3,8 @@ import { computed, watch } from 'vue'
 import { useAuthStore } from '@/core/store/useAuthStore'
 import { useEditorStore } from '@/core/store/useEditorStore'
 import { useProjectAccessStore } from '@/core/store/useProjectAccessStore'
-import type { EditorPermissionKey, InviteTeamMemberInput, ProjectRole, ShareLinkRole } from '@/core/models/accessControl'
-import TeamAccessSection from './TeamAccessSection.vue'
+import type { EditorPermissionKey, ShareLinkRole } from '@/core/models/accessControl'
+import ShareLinksSection from './ShareLinksSection.vue'
 import EditorPermissionsSection from './EditorPermissionsSection.vue'
 
 const editorStore = useEditorStore()
@@ -33,16 +33,6 @@ const projectAccess = computed(() => {
   return accessStore.getProjectAccess(activeProjectId.value)
 })
 
-function addMember(payload: InviteTeamMemberInput) {
-  if (!activeProjectId.value) return
-  accessStore.addMember(activeProjectId.value, payload)
-}
-
-function updateRole(payload: { memberId: string; role: ProjectRole }) {
-  if (!activeProjectId.value) return
-  accessStore.updateMemberRole(activeProjectId.value, payload.memberId, payload.role)
-}
-
 function togglePermission(payload: { permissionKey: EditorPermissionKey; enabled: boolean }) {
   if (!activeProjectId.value || !projectAccess.value) return
   accessStore.toggleEditorPermission(activeProjectId.value, payload.permissionKey, payload.enabled)
@@ -62,6 +52,11 @@ function toggleShareLink(payload: { linkId: string; enabled: boolean }) {
   if (!activeProjectId.value) return
   accessStore.toggleShareLink(activeProjectId.value, payload.linkId, payload.enabled)
 }
+
+function deleteShareLink(payload: { linkId: string }) {
+  if (!activeProjectId.value) return
+  accessStore.deleteShareLink(activeProjectId.value, payload.linkId)
+}
 </script>
 
 <template>
@@ -74,15 +69,13 @@ function toggleShareLink(payload: { linkId: string; enabled: boolean }) {
       <div class="fw-semibold">{{ activePoster?.widthMm || 0 }} x {{ activePoster?.heightMm || 0 }} mm</div>
     </section>
 
-    <TeamAccessSection
+    <ShareLinksSection
       v-if="projectAccess"
-      :members="projectAccess.members"
       :share-links="projectAccess.shareLinks"
-      @add-member="addMember"
-      @update-role="updateRole"
       @create-share-link="createShareLink"
       @update-share-link-role="updateShareLinkRole"
       @toggle-share-link="toggleShareLink"
+      @delete-share-link="deleteShareLink"
     />
 
     <EditorPermissionsSection

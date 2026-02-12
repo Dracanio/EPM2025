@@ -4,9 +4,30 @@ import type { Poster, PosterFormat } from '../models/poster';
 import type { PosterElement } from '../models/element';
 import type { Template } from '../models/template';
 
+const POSTER_STORAGE_KEY = 'poster_designer_posters_v1';
+
+function clonePoster(poster: Poster): Poster {
+  return JSON.parse(JSON.stringify(poster)) as Poster;
+}
+
+function readStoredPosters(): Record<string, Poster> {
+  if (typeof window === 'undefined') return {};
+  const raw = window.localStorage.getItem(POSTER_STORAGE_KEY);
+  if (!raw) return {};
+
+  try {
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') return {};
+    return parsed as Record<string, Poster>;
+  } catch {
+    return {};
+  }
+}
+
 export const useEditorStore = defineStore('editor', () => {
   // State
   const activePoster = ref<Poster | null>(null);
+  const byPosterId = ref<Record<string, Poster>>(readStoredPosters());
   const activePageId = ref<string | null>(null);
   const selectedElementId = ref<string | null>(null);
   const zoomLevel = ref<number>(1);
@@ -26,6 +47,65 @@ export const useEditorStore = defineStore('editor', () => {
     if (!currentElements.value || !selectedElementId.value) return null;
     return currentElements.value.find(el => el.id === selectedElementId.value) || null;
   });
+
+  function persistPosters() {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem(POSTER_STORAGE_KEY, JSON.stringify(byPosterId.value));
+  }
+
+  function savePoster(poster: Poster) {
+    byPosterId.value[poster.id] = clonePoster(poster);
+    persistPosters();
+    if (activePoster.value?.id === poster.id) {
+      isDirty.value = false;
+    }
+  }
+
+  function saveActivePoster() {
+    if (!activePoster.value) return false;
+    savePoster(activePoster.value);
+    return true;
+  }
+
+  function getStoredPoster(posterId: string): Poster | null {
+    const stored = byPosterId.value[posterId];
+    if (!stored) return null;
+    return clonePoster(stored);
+  }
+
+  function loadPosterById(posterId: string) {
+    const stored = getStoredPoster(posterId);
+    if (!stored) return false;
+
+    activePoster.value = stored;
+    activePageId.value = stored.pages[0]?.id || null;
+    selectedElementId.value = null;
+    zoomLevel.value = 1;
+    isDirty.value = false;
+    return true;
+  }
+
+  function deleteStoredPoster(posterId: string) {
+    if (!byPosterId.value[posterId]) return;
+    delete byPosterId.value[posterId];
+    persistPosters();
+  }
+
+  function duplicateStoredPoster(sourcePosterId: string, targetPosterId: string, nextTitle?: string) {
+    const source = getStoredPoster(sourcePosterId);
+    if (!source) return false;
+
+    source.id = targetPosterId;
+    if (nextTitle) {
+      source.meta = {
+        ...source.meta,
+        title: nextTitle
+      };
+    }
+
+    savePoster(source);
+    return true;
+  }
 
   // Actions
   function initPoster(format: PosterFormat = 'A4') {
@@ -293,6 +373,7 @@ export const useEditorStore = defineStore('editor', () => {
 
   return {
     activePoster,
+    byPosterId,
     activePage,
     activePageId,
     currentElements, // Expose this for Canvas
@@ -300,6 +381,12 @@ export const useEditorStore = defineStore('editor', () => {
     selectedElement,
     zoomLevel,
     isDirty,
+    savePoster,
+    saveActivePoster,
+    getStoredPoster,
+    loadPosterById,
+    deleteStoredPoster,
+    duplicateStoredPoster,
     initPoster,
     createPosterFromTemplate,
     addPage,

@@ -1,19 +1,21 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { InviteTeamMemberInput, ProjectRole, ShareLink, ShareLinkRole, TeamMember } from '@/core/models/accessControl'
-import { Copy, Link2, Plus, ShieldCheck } from 'lucide-vue-next'
+import type { InviteTeamMemberInput, ProjectRole, ProjectTeamAccess, ShareLinkRole, TeamMember } from '@/core/models/accessControl'
+import type { TeamWorkspace } from '@/core/models/teamWorkspace'
+import { Plus, ShieldCheck, Trash2, Users } from 'lucide-vue-next'
 
 const props = defineProps<{
   members: TeamMember[]
-  shareLinks: ShareLink[]
+  teamAccesses: ProjectTeamAccess[]
+  availableTeams: TeamWorkspace[]
 }>()
 
 const emit = defineEmits<{
   (e: 'add-member', payload: InviteTeamMemberInput): void
   (e: 'update-role', payload: { memberId: string; role: ProjectRole }): void
-  (e: 'create-share-link', payload: { role: ShareLinkRole }): void
-  (e: 'update-share-link-role', payload: { linkId: string; role: ShareLinkRole }): void
-  (e: 'toggle-share-link', payload: { linkId: string; enabled: boolean }): void
+  (e: 'add-team-access', payload: { teamId: string; role: ShareLinkRole }): void
+  (e: 'update-team-access-role', payload: { accessId: string; role: ShareLinkRole }): void
+  (e: 'remove-team-access', payload: { accessId: string }): void
 }>()
 
 const newMemberName = ref('')
@@ -21,11 +23,17 @@ const newMemberEmail = ref('')
 const newMemberRole = ref<InviteTeamMemberInput['role']>('editor')
 const inviteError = ref('')
 
-const newLinkRole = ref<ShareLinkRole>('viewer')
-const copiedLinkId = ref<string | null>(null)
+const selectedTeamId = ref('')
+const selectedTeamRole = ref<ShareLinkRole>('viewer')
+const teamAccessError = ref('')
 
 const ownerMember = computed(() => props.members.find((member) => member.role === 'owner'))
 const managedMembers = computed(() => props.members.filter((member) => member.role !== 'owner'))
+
+const availableTeamOptions = computed(() => {
+  const assignedTeamIds = new Set(props.teamAccesses.map((entry) => entry.teamId))
+  return props.availableTeams.filter((entry) => !assignedTeamIds.has(entry.id))
+})
 
 function initialsFor(name: string) {
   return name
@@ -74,39 +82,29 @@ function onRoleChange(memberId: string, event: Event) {
   emit('update-role', { memberId, role: nextRole })
 }
 
-function createShareLink() {
-  emit('create-share-link', {
-    role: newLinkRole.value
-  })
-}
-
-function linkUrl(token: string) {
-  return `${window.location.origin}/shared/${token}`
-}
-
-async function copyLink(linkId: string, token: string) {
-  const value = linkUrl(token)
-  try {
-    await navigator.clipboard.writeText(value)
-    copiedLinkId.value = linkId
-    setTimeout(() => {
-      if (copiedLinkId.value === linkId) copiedLinkId.value = null
-    }, 1300)
-  } catch {
-    copiedLinkId.value = null
+function submitTeamAccess() {
+  if (!selectedTeamId.value) {
+    teamAccessError.value = 'Bitte zuerst ein Team auswaehlen.'
+    return
   }
-}
 
-function updateShareRole(linkId: string, event: Event) {
-  const role = (event.target as HTMLSelectElement).value as ShareLinkRole
-  emit('update-share-link-role', { linkId, role })
-}
-
-function toggleShare(linkId: string, event: Event) {
-  emit('toggle-share-link', {
-    linkId,
-    enabled: (event.target as HTMLInputElement).checked
+  teamAccessError.value = ''
+  emit('add-team-access', {
+    teamId: selectedTeamId.value,
+    role: selectedTeamRole.value
   })
+
+  selectedTeamId.value = ''
+  selectedTeamRole.value = 'viewer'
+}
+
+function updateTeamAccessRole(accessId: string, event: Event) {
+  const role = (event.target as HTMLSelectElement).value as ShareLinkRole
+  emit('update-team-access-role', { accessId, role })
+}
+
+function removeTeamAccess(accessId: string) {
+  emit('remove-team-access', { accessId })
 }
 </script>
 
@@ -114,7 +112,7 @@ function toggleShare(linkId: string, event: Event) {
   <section class="settings-card border rounded-4 p-3">
     <header class="mb-3">
       <h3 class="settings-title mb-1">Team & Zugriff</h3>
-      <p class="text-secondary mb-0">Owner, Editoren und Viewer fuer dieses Projekt verwalten.</p>
+      <p class="text-secondary mb-0">Direkte Mitglieder und Team-Zugriffe fuer dieses Projekt verwalten.</p>
     </header>
 
     <div class="row g-2 mb-3">
@@ -175,49 +173,68 @@ function toggleShare(linkId: string, event: Event) {
       </article>
     </div>
 
-    <div class="share-links border rounded-3 p-2">
+    <div class="border rounded-3 p-2 team-access-wrapper">
       <div class="d-flex align-items-center justify-content-between gap-2 mb-2">
-        <p class="mb-0 fw-semibold">Freigabe-Links</p>
-        <span class="small text-secondary">{{ shareLinks.length }} aktiv/inaktiv</span>
+        <p class="mb-0 fw-semibold d-inline-flex align-items-center gap-1">
+          <Users :size="14" />
+          Projekt-Teams
+        </p>
+        <span class="small text-secondary">{{ teamAccesses.length }} verknuepft</span>
       </div>
 
       <div class="row g-2 mb-2">
+        <div class="col-12">
+          <select v-model="selectedTeamId" class="form-select form-select-sm">
+            <option value="">Team aus Profil waehlen</option>
+            <option v-for="team in availableTeamOptions" :key="team.id" :value="team.id">
+              {{ team.name }} ({{ team.memberEmails.length }} Mitglieder)
+            </option>
+          </select>
+        </div>
         <div class="col-7">
-          <select v-model="newLinkRole" class="form-select form-select-sm">
-            <option value="viewer">Link: Nur ansehen</option>
-            <option value="editor">Link: Bearbeiten</option>
+          <select v-model="selectedTeamRole" class="form-select form-select-sm">
+            <option value="viewer">Viewer</option>
+            <option value="editor">Editor</option>
           </select>
         </div>
         <div class="col-5">
-          <button type="button" class="btn btn-outline-secondary btn-sm w-100 d-inline-flex align-items-center justify-content-center gap-1" @click="createShareLink">
-            <Link2 :size="14" />
-            Erstellen
+          <button
+            type="button"
+            class="btn btn-outline-secondary btn-sm w-100 d-inline-flex align-items-center justify-content-center gap-1"
+            :disabled="availableTeamOptions.length === 0"
+            @click="submitTeamAccess"
+          >
+            <Plus :size="14" />
+            Team
           </button>
         </div>
       </div>
 
-      <div v-if="shareLinks.length === 0" class="small text-secondary">Noch kein Link erstellt.</div>
+      <div v-if="teamAccessError" class="small text-danger mb-2">{{ teamAccessError }}</div>
+      <div v-else-if="availableTeams.length === 0" class="small text-secondary mb-2">
+        Keine Teams im Profil vorhanden. Lege zuerst ein Team im Profilbereich an.
+      </div>
+      <div v-else-if="availableTeamOptions.length === 0" class="small text-secondary mb-2">
+        Alle verfuegbaren Teams sind bereits mit dem Projekt verknuepft.
+      </div>
 
+      <div v-if="teamAccesses.length === 0" class="small text-secondary">Noch kein Team verknuepft.</div>
       <div v-else class="vstack gap-2">
-        <article v-for="link in shareLinks" :key="link.id" class="share-link-row">
-          <div class="input-group input-group-sm mb-2">
-            <input type="text" class="form-control" :value="linkUrl(link.token)" readonly />
-            <button type="button" class="btn btn-outline-secondary" @click="copyLink(link.id, link.token)">
-              <Copy :size="14" />
+        <article v-for="entry in teamAccesses" :key="entry.id" class="team-access-row">
+          <div>
+            <p class="fw-semibold mb-0">{{ entry.teamName }}</p>
+            <p class="small text-secondary mb-0">{{ entry.memberEmails.length }} Mitglieder</p>
+          </div>
+
+          <div class="d-flex align-items-center gap-2">
+            <select class="form-select form-select-sm team-access-role-select" :value="entry.role" @change="updateTeamAccessRole(entry.id, $event)">
+              <option value="viewer">Viewer</option>
+              <option value="editor">Editor</option>
+            </select>
+            <button type="button" class="btn btn-outline-danger btn-sm" title="Teamzugriff loeschen" @click="removeTeamAccess(entry.id)">
+              <Trash2 :size="14" />
             </button>
           </div>
-
-          <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap">
-            <select class="form-select form-select-sm share-role-select" :value="link.role" @change="updateShareRole(link.id, $event)">
-              <option value="viewer">Viewer Link</option>
-              <option value="editor">Editor Link</option>
-            </select>
-
-            <div class="form-check form-switch m-0">
-              <input class="form-check-input" type="checkbox" :checked="link.isActive" @change="toggleShare(link.id, $event)" />
-            </div>
-          </div>
-          <p v-if="copiedLinkId === link.id" class="small text-success mb-0 mt-1">Link kopiert.</p>
         </article>
       </div>
     </div>
@@ -295,20 +312,24 @@ function toggleShare(linkId: string, event: Event) {
   border: 1px solid #cedbff;
 }
 
-.share-links {
+.team-access-wrapper {
   border-color: var(--panel-border) !important;
   background: #f8fafc;
 }
 
-.share-link-row {
+.team-access-row {
   border: 1px solid var(--panel-border);
   border-radius: 0.75rem;
   padding: 0.5rem;
   background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
-.share-role-select {
-  width: 160px;
+.team-access-role-select {
+  width: 140px;
 }
 </style>
-

@@ -1,18 +1,19 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useEditorStore } from '@/core/store/useEditorStore'
 import type { TextElement, ImageElement } from '@/core/models/element'
 import type { ProjectRole } from '@/core/models/accessControl'
 import { useAuthStore } from '@/core/store/useAuthStore'
 import { useProjectAccessStore } from '@/core/store/useProjectAccessStore'
-import { GripVertical, Heading1, Image, Layers, Settings2, Trash2, Type } from 'lucide-vue-next'
+import { GripVertical, Heading1, Image, Layers, Lock, Settings2, Trash2, Type, Users } from 'lucide-vue-next'
 import ProjectSettingsPanel from './settings/ProjectSettingsPanel.vue'
+import TeamManagementPanel from './settings/TeamManagementPanel.vue'
 
 const editorStore = useEditorStore()
 const authStore = useAuthStore()
 const accessStore = useProjectAccessStore()
 
-type PanelState = 'layers' | 'text' | 'image' | 'settings'
+type PanelState = 'layers' | 'text' | 'image' | 'settings' | 'team'
 
 const activePanel = ref<PanelState>('layers')
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -23,7 +24,8 @@ const panelTitle = computed(() => {
   if (activePanel.value === 'layers') return 'Ebenen'
   if (activePanel.value === 'text') return 'Text'
   if (activePanel.value === 'image') return 'Bilder'
-  return 'Einstellungen'
+  if (activePanel.value === 'team') return 'Team & Zugriff'
+  return 'Berechtigungen & Freigabe'
 })
 
 const layers = computed(() => {
@@ -51,6 +53,28 @@ const canDeleteElements = computed(() => {
   if (!activeProjectId.value) return true
   return accessStore.canRolePerform(activeProjectId.value, currentProjectRole.value, 'deleteElements')
 })
+
+const canMoveAndResizeElements = computed(() => {
+  if (!activeProjectId.value) return true
+  return accessStore.canRolePerform(activeProjectId.value, currentProjectRole.value, 'moveAndResizeElements')
+})
+
+const canManageProjectAccess = computed(() => {
+  if (authStore.isLinkSession) return false
+  if (!activeProjectId.value) return true
+  return currentProjectRole.value === 'owner'
+})
+
+watch(
+  canManageProjectAccess,
+  (enabled) => {
+    if (enabled) return
+    if (activePanel.value === 'settings' || activePanel.value === 'team') {
+      activePanel.value = 'layers'
+    }
+  },
+  { immediate: true }
+)
 
 function addTitle() {
   if (!canAddElements.value) return
@@ -153,6 +177,7 @@ function deleteLayer(id: string) {
 }
 
 function onLayerDragStart(layerId: string, event: DragEvent) {
+  if (!canMoveAndResizeElements.value) return
   draggedLayerId.value = layerId
   dragOverLayerId.value = null
   if (event.dataTransfer) {
@@ -162,6 +187,7 @@ function onLayerDragStart(layerId: string, event: DragEvent) {
 }
 
 function onLayerDragOver(layerId: string, event: DragEvent) {
+  if (!canMoveAndResizeElements.value) return
   if (!draggedLayerId.value || draggedLayerId.value === layerId) return
   event.preventDefault()
   dragOverLayerId.value = layerId
@@ -171,6 +197,7 @@ function onLayerDragOver(layerId: string, event: DragEvent) {
 }
 
 function onLayerDrop(targetLayerId: string, event: DragEvent) {
+  if (!canMoveAndResizeElements.value) return
   event.preventDefault()
   const sourceLayerId = draggedLayerId.value || event.dataTransfer?.getData('text/plain') || null
   if (!sourceLayerId || sourceLayerId === targetLayerId) {
@@ -243,13 +270,25 @@ function onLayerDragEnd() {
       </button>
 
       <button
+        v-if="canManageProjectAccess"
         type="button"
         class="btn btn-outline-secondary btn-sm editor-rail-button"
         :class="{ active: activePanel === 'settings' }"
-        title="Einstellungen"
+        title="Berechtigungen & Freigabe"
         @click="activePanel = 'settings'"
       >
         <Settings2 :size="16" />
+      </button>
+
+      <button
+        v-if="canManageProjectAccess"
+        type="button"
+        class="btn btn-outline-secondary btn-sm editor-rail-button"
+        :class="{ active: activePanel === 'team' }"
+        title="Team & Zugriff"
+        @click="activePanel = 'team'"
+      >
+        <Users :size="16" />
       </button>
     </nav>
 
@@ -267,14 +306,15 @@ function onLayerDragEnd() {
             :class="{
               'is-drag-over': dragOverLayerId === element.id && draggedLayerId !== element.id
             }"
-            draggable="true"
+            :draggable="canMoveAndResizeElements"
             @dragstart="onLayerDragStart(element.id, $event)"
             @dragover="onLayerDragOver(element.id, $event)"
             @drop="onLayerDrop(element.id, $event)"
             @dragend="onLayerDragEnd"
           >
             <span class="sidebar-layer-handle" aria-hidden="true">
-              <GripVertical :size="14" />
+              <GripVertical v-if="canMoveAndResizeElements" :size="14" />
+              <Lock v-else :size="13" />
             </span>
 
             <button
@@ -294,25 +334,32 @@ function onLayerDragEnd() {
               :disabled="!canDeleteElements"
               @click.stop="deleteLayer(element.id)"
             >
-              <Trash2 :size="14" />
+              <Trash2 v-if="canDeleteElements" :size="14" />
+              <Lock v-else :size="13" />
             </button>
           </div>
 
           <p v-if="layers.length === 0" class="small text-secondary mb-0">
             Keine Elemente vorhanden.
           </p>
+          <p v-if="!canMoveAndResizeElements" class="small text-secondary mb-0 d-flex align-items-center gap-1">
+            <Lock :size="12" />
+            Ebenen-Reihenfolge ist fuer deine Rolle gesperrt.
+          </p>
         </div>
 
         <div v-else-if="activePanel === 'text'" class="vstack gap-2">
           <button type="button" class="btn btn-outline-secondary text-start" :disabled="!canAddElements" @click="addTitle">
             <span class="d-flex align-items-center gap-2">
-              <Heading1 :size="16" />
+              <Heading1 v-if="canAddElements" :size="16" />
+              <Lock v-else :size="14" />
               Titel einfuegen
             </span>
           </button>
           <button type="button" class="btn btn-outline-secondary text-start" :disabled="!canAddElements" @click="addText">
             <span class="d-flex align-items-center gap-2">
-              <Type :size="16" />
+              <Type v-if="canAddElements" :size="16" />
+              <Lock v-else :size="14" />
               Textblock einfuegen
             </span>
           </button>
@@ -322,7 +369,8 @@ function onLayerDragEnd() {
         <div v-else-if="activePanel === 'image'" class="vstack gap-2">
           <button type="button" class="btn btn-outline-secondary text-start" :disabled="!canUploadAssets" @click="triggerImageUpload">
             <span class="d-flex align-items-center gap-2">
-              <Image :size="16" />
+              <Image v-if="canUploadAssets" :size="16" />
+              <Lock v-else :size="14" />
               Bild hochladen
             </span>
           </button>
@@ -331,7 +379,8 @@ function onLayerDragEnd() {
           </p>
         </div>
 
-        <ProjectSettingsPanel v-else />
+        <ProjectSettingsPanel v-else-if="activePanel === 'settings'" />
+        <TeamManagementPanel v-else />
       </div>
 
     </section>

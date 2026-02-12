@@ -1,15 +1,10 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import AppNavbar from '@/components/AppNavbar.vue'
+import type { TeamWorkspace } from '@/core/models/teamWorkspace'
 import { useAuthStore } from '@/core/store/useAuthStore'
 import { useProjectAccessStore } from '@/core/store/useProjectAccessStore'
-
-interface TeamWorkspace {
-  id: string
-  name: string
-  description: string
-  membersCount: number
-}
+import { readStoredTeamsForUser, writeStoredTeamsForUser } from '@/core/utils/teamWorkspaceStorage'
 
 const authStore = useAuthStore()
 const accessStore = useProjectAccessStore()
@@ -21,33 +16,23 @@ const infoSaved = ref(false)
 
 const newTeamName = ref('')
 const newTeamDescription = ref('')
+const newTeamMembersInput = ref('')
 const teamError = ref('')
 const teams = ref<TeamWorkspace[]>([])
-
-const teamsStorageKey = computed(() => {
-  const userId = authStore.user?.id
-  if (!userId) return null
-  return `poster_designer_profile_teams_${userId}`
-})
+const editingTeamId = ref<string | null>(null)
+const editTeamName = ref('')
+const editTeamDescription = ref('')
+const editTeamMembersInput = ref('')
 
 watch(
-  teamsStorageKey,
-  (storageKey) => {
-    if (!storageKey) {
+  () => [authStore.user?.id, authStore.user?.email],
+  () => {
+    const userId = authStore.user?.id
+    if (!userId) {
       teams.value = []
       return
     }
-    const raw = window.localStorage.getItem(storageKey)
-    if (!raw) {
-      teams.value = []
-      return
-    }
-    try {
-      const parsed = JSON.parse(raw)
-      teams.value = Array.isArray(parsed) ? parsed : []
-    } catch {
-      teams.value = []
-    }
+    teams.value = readStoredTeamsForUser(userId, authStore.user?.email || undefined)
   },
   { immediate: true }
 )
@@ -57,13 +42,27 @@ const linkedProjects = computed(() => {
   if (!email) return []
 
   return Object.values(accessStore.byProjectId).filter((project) =>
-    project.members.some((member) => member.email.trim().toLowerCase() === email)
+    project.members.some((member) => member.email.trim().toLowerCase() === email) ||
+    project.teamAccesses.some((teamAccess) => teamAccess.memberEmails.includes(email))
   )
 })
 
 function persistTeams() {
-  if (!teamsStorageKey.value) return
-  window.localStorage.setItem(teamsStorageKey.value, JSON.stringify(teams.value))
+  const userId = authStore.user?.id
+  if (!userId) return
+  writeStoredTeamsForUser(userId, teams.value)
+}
+
+function parseMemberEmails(value: string) {
+  const normalized = value
+    .split(',')
+    .map((entry) => entry.trim().toLowerCase())
+    .filter((entry, index, values) => entry.length > 0 && values.indexOf(entry) === index)
+
+  if (normalized.length > 0) return normalized
+  const fallbackEmail = authStore.user?.email?.trim().toLowerCase()
+  if (!fallbackEmail) return []
+  return [fallbackEmail]
 }
 
 function saveProfile() {
@@ -101,11 +100,68 @@ function createTeam() {
     id: crypto.randomUUID(),
     name: teamName,
     description: newTeamDescription.value.trim(),
-    membersCount: 1
+    memberEmails: parseMemberEmails(newTeamMembersInput.value)
   })
   newTeamName.value = ''
   newTeamDescription.value = ''
+  newTeamMembersInput.value = ''
   persistTeams()
+}
+
+function beginEditTeam(team: TeamWorkspace) {
+  editingTeamId.value = team.id
+  editTeamName.value = team.name
+  editTeamDescription.value = team.description
+  editTeamMembersInput.value = team.memberEmails.join(', ')
+  teamError.value = ''
+}
+
+function cancelEditTeam() {
+  editingTeamId.value = null
+  editTeamName.value = ''
+  editTeamDescription.value = ''
+  editTeamMembersInput.value = ''
+}
+
+function saveTeamEdit(teamId: string) {
+  const teamName = editTeamName.value.trim()
+  if (!teamName) {
+    teamError.value = 'Teamname ist erforderlich.'
+    return
+  }
+
+  const index = teams.value.findIndex((entry) => entry.id === teamId)
+  if (index === -1) {
+    cancelEditTeam()
+    return
+  }
+  const currentTeam = teams.value[index]
+  if (!currentTeam) {
+    cancelEditTeam()
+    return
+  }
+
+  teams.value[index] = {
+    ...currentTeam,
+    name: teamName,
+    description: editTeamDescription.value.trim(),
+    memberEmails: parseMemberEmails(editTeamMembersInput.value)
+  }
+
+  persistTeams()
+  cancelEditTeam()
+}
+
+function deleteTeam(team: TeamWorkspace) {
+  const accepted = window.confirm(`Team "${team.name}" wirklich loeschen?`)
+  if (!accepted) return
+
+  teams.value = teams.value.filter((entry) => entry.id !== team.id)
+  persistTeams()
+
+  if (editingTeamId.value === team.id) {
+    cancelEditTeam()
+  }
 }
 </script>
 
@@ -167,6 +223,14 @@ function createTeam() {
                   <input v-model="newTeamDescription" type="text" class="form-control" placeholder="Beschreibung (optional)" />
                 </div>
                 <div class="col-12">
+                  <input
+                    v-model="newTeamMembersInput"
+                    type="text"
+                    class="form-control"
+                    placeholder="Mitglieder E-Mails (kommagetrennt)"
+                  />
+                </div>
+                <div class="col-12">
                   <button type="button" class="btn btn-outline-primary w-100" @click="createTeam">Team erstellen</button>
                 </div>
                 <div v-if="teamError" class="col-12">
@@ -177,9 +241,33 @@ function createTeam() {
               <div class="vstack gap-2">
                 <div v-if="teams.length === 0" class="small text-secondary">Noch keine Teams erstellt.</div>
                 <article v-for="team in teams" :key="team.id" class="team-row">
-                  <p class="fw-semibold mb-0">{{ team.name }}</p>
-                  <p class="small text-secondary mb-0">{{ team.description || 'Ohne Beschreibung' }}</p>
-                  <p class="small mb-0">{{ team.membersCount }} Mitglied(er)</p>
+                  <template v-if="editingTeamId === team.id">
+                    <div class="vstack gap-2">
+                      <input v-model="editTeamName" type="text" class="form-control form-control-sm" placeholder="Teamname" />
+                      <input v-model="editTeamDescription" type="text" class="form-control form-control-sm" placeholder="Beschreibung (optional)" />
+                      <input
+                        v-model="editTeamMembersInput"
+                        type="text"
+                        class="form-control form-control-sm"
+                        placeholder="Mitglieder E-Mails (kommagetrennt)"
+                      />
+                      <div class="d-flex gap-2">
+                        <button type="button" class="btn btn-sm btn-primary" @click="saveTeamEdit(team.id)">Speichern</button>
+                        <button type="button" class="btn btn-sm btn-outline-secondary" @click="cancelEditTeam">Abbrechen</button>
+                      </div>
+                    </div>
+                  </template>
+                  <template v-else>
+                    <p class="fw-semibold mb-0">{{ team.name }}</p>
+                    <p class="small text-secondary mb-0">{{ team.description || 'Ohne Beschreibung' }}</p>
+                    <div class="d-flex align-items-center justify-content-between gap-2 mt-1">
+                      <p class="small mb-0">{{ team.memberEmails.length }} Mitglied(er)</p>
+                      <div class="d-flex gap-1">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" @click="beginEditTeam(team)">Bearbeiten</button>
+                        <button type="button" class="btn btn-outline-danger btn-sm" @click="deleteTeam(team)">Loeschen</button>
+                      </div>
+                    </div>
+                  </template>
                 </article>
               </div>
             </div>
@@ -198,6 +286,7 @@ function createTeam() {
               <article class="project-access-card">
                 <p class="fw-semibold mb-1">Projekt {{ project.projectId.slice(0, 8) }}</p>
                 <p class="small text-secondary mb-1">{{ project.members.length }} Teammitglieder</p>
+                <p class="small text-secondary mb-1">{{ project.teamAccesses.length }} Projekt-Teams</p>
                 <p class="small text-secondary mb-0">{{ project.shareLinks.length }} Share-Links</p>
               </article>
             </div>
@@ -247,4 +336,3 @@ function createTeam() {
   background: #ffffff;
 }
 </style>
-

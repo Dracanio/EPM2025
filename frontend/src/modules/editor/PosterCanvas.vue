@@ -18,7 +18,7 @@
 
         <!-- Grid Lines (Guides) -->
         <v-line 
-          v-if="!readOnly"
+          v-if="canMoveResize"
           v-for="(line, i) in guides" 
           :key="'guide-' + i" 
           :config="{
@@ -35,8 +35,8 @@
           <v-label
             v-if="element.type === 'text'"
             :config="getLabelConfig(element as TextElement)"
-            @dragend="(e: Konva.KonvaEventObject<DragEvent>) => !readOnly && handleDragEnd(e, element.id)"
-            @transformend="(e: Konva.KonvaEventObject<Event>) => !readOnly && handleTransformEnd(e, element.id)"
+            @dragend="(e: Konva.KonvaEventObject<DragEvent>) => canMoveResize && handleDragEnd(e, element.id)"
+            @transformend="(e: Konva.KonvaEventObject<Event>) => canMoveResize && handleTransformEnd(e, element.id)"
           >
             <v-tag :config="getTagConfig(element as TextElement)" />
             <v-text :config="getTextContentConfig(element as TextElement)" />
@@ -46,14 +46,14 @@
           <v-image
             v-if="element.type === 'image'"
             :config="getImageConfig(element as ImageElement)"
-            @dragend="(e: Konva.KonvaEventObject<DragEvent>) => !readOnly && handleDragEnd(e, element.id)"
-            @transformend="(e: Konva.KonvaEventObject<Event>) => !readOnly && handleTransformEnd(e, element.id)"
+            @dragend="(e: Konva.KonvaEventObject<DragEvent>) => canMoveResize && handleDragEnd(e, element.id)"
+            @transformend="(e: Konva.KonvaEventObject<Event>) => canMoveResize && handleTransformEnd(e, element.id)"
           />
         </template>
 
         <!-- Transformer (Only if not readOnly) -->
         <v-transformer
-          v-if="!readOnly"
+          v-if="canMoveResize"
           ref="transformerRef"
           :config="{
             boundBoxFunc: (oldBox: any, newBox: any) => {
@@ -78,6 +78,7 @@ const props = defineProps<{
   widthMm?: number;
   heightMm?: number;
   readOnly?: boolean;
+  allowMoveResize?: boolean;
   pageId?: string; // To uniquely identify stage if multiple
 }>();
 
@@ -93,6 +94,7 @@ const activeHeightMm = computed(() => props.heightMm ?? store.activePoster?.heig
 const zoomLevel = computed(() => props.readOnly ? 1 : store.zoomLevel); // Force zoom 1 for print/readonly if needed, or pass prop? 
 // Actually for print we probably want zoom 1.
 const isReadOnly = computed(() => props.readOnly || false);
+const canMoveResize = computed(() => !isReadOnly.value && (props.allowMoveResize ?? true));
 
 const containerId = computed(() => props.pageId ? `poster-stage-${props.pageId}` : 'poster-stage-container');
 
@@ -133,7 +135,7 @@ const pxToMm = (px: number) => px / PIXELS_PER_MM;
 const RENARD_SPACINGS_MM = [16.6, 20.8, 26.6, 33.2, 41.5, 52.3, 66.4, 83.0, 104.6, 132.8, 166.0];
 
 function handleDragMove(e: Konva.KonvaEventObject<DragEvent>) {
-    if (isReadOnly.value) return;
+    if (!canMoveResize.value) return;
     
     const node = e.target;
     guides.value = [];
@@ -178,6 +180,7 @@ function handleDragMove(e: Konva.KonvaEventObject<DragEvent>) {
 }
 
 function handleDragEndGlobal() {
+    if (!canMoveResize.value) return;
     guides.value = [];
 }
 
@@ -187,7 +190,7 @@ function getLabelConfig(element: TextElement) {
     x: mmToPx(element.xMm),
     y: mmToPx(element.yMm),
     rotation: element.rotationDeg,
-    draggable: !isReadOnly.value && !element.locked,
+    draggable: canMoveResize.value && !element.locked,
     name: 'element',
     dragBoundFunc: function(pos: { x: number, y: number }) {
         return pos;
@@ -254,7 +257,7 @@ function getImageConfig(element: ImageElement) {
     width: mmToPx(element.widthMm),
     height: mmToPx(element.heightMm),
     rotation: element.rotationDeg,
-    draggable: !isReadOnly.value && !element.locked,
+    draggable: canMoveResize.value && !element.locked,
     name: 'element',
   };
 
@@ -310,6 +313,7 @@ function handleStageMouseDown(e: Konva.KonvaEventObject<MouseEvent>) {
 }
 
 function handleDragEnd(e: Konva.KonvaEventObject<DragEvent>, id: string) {
+  if (!canMoveResize.value) return;
   const node = e.target;
   store.updateElement(id, {
     xMm: pxToMm(node.x()),
@@ -318,6 +322,7 @@ function handleDragEnd(e: Konva.KonvaEventObject<DragEvent>, id: string) {
 }
 
 function handleTransformEnd(e: Konva.KonvaEventObject<Event>, id: string) {
+  if (!canMoveResize.value) return;
   const node = e.target;
   const scaleX = node.scaleX();
   node.scaleX(1);

@@ -36,15 +36,21 @@
               class="color-swatch"
               :style="{ backgroundColor: color.value }"
               :title="color.name"
+              :disabled="!canEditColors"
               @click="setPosterBackground(color.value)"
             ></button>
             <input
               type="color"
               :value="store.activePoster?.backgroundColor || '#ffffff'"
               class="color-swatch"
+              :disabled="!canEditColors"
               @input="(e) => setPosterBackground((e.target as HTMLInputElement).value)"
             />
           </div>
+          <p v-if="!canEditColors" class="small text-secondary mt-2 mb-0 d-inline-flex align-items-center gap-1">
+            <Lock :size="12" />
+            Farben sind fuer deine Rolle gesperrt.
+          </p>
         </div>
       </div>
 
@@ -55,6 +61,7 @@
             type="button"
             class="btn btn-outline-secondary btn-sm flex-fill"
             title="Horizontal zentrieren"
+            :disabled="!canMoveAndResizeElements"
             @click="store.alignElement(selectedElement.id, 'h-center')"
           >
             <AlignHorizontalJustifyCenter :size="16" />
@@ -63,6 +70,7 @@
             type="button"
             class="btn btn-outline-secondary btn-sm flex-fill"
             title="Vertikal zentrieren"
+            :disabled="!canMoveAndResizeElements"
             @click="store.alignElement(selectedElement.id, 'v-center')"
           >
             <AlignVerticalJustifyCenter :size="16" />
@@ -71,11 +79,16 @@
             type="button"
             class="btn btn-outline-secondary btn-sm flex-fill"
             title="Mitte"
+            :disabled="!canMoveAndResizeElements"
             @click="store.alignElement(selectedElement.id, 'center')"
           >
             <Crosshair :size="16" />
           </button>
         </div>
+        <p v-if="!canMoveAndResizeElements" class="small text-secondary mt-2 mb-0 d-inline-flex align-items-center gap-1">
+          <Lock :size="12" />
+          Position und Groesse sind fuer deine Rolle gesperrt.
+        </p>
       </div>
     </div>
 
@@ -85,20 +98,43 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useEditorStore } from '@/core/store/useEditorStore'
+import { useAuthStore } from '@/core/store/useAuthStore'
+import { useProjectAccessStore } from '@/core/store/useProjectAccessStore'
 import TextInspector from './TextInspector.vue'
 import ImageInspector from './ImageInspector.vue'
 import type { TextElement, ImageElement } from '@/core/models/element'
+import type { ProjectRole } from '@/core/models/accessControl'
 import { colors } from '@/core/styleguide/colors'
 import {
   X,
   MousePointerClick,
   AlignHorizontalJustifyCenter,
   AlignVerticalJustifyCenter,
-  Crosshair
+  Crosshair,
+  Lock
 } from 'lucide-vue-next'
 
 const store = useEditorStore()
+const authStore = useAuthStore()
+const accessStore = useProjectAccessStore()
 const selectedElement = computed(() => store.selectedElement)
+
+const activeProjectId = computed(() => store.activePoster?.id || '')
+const currentProjectRole = computed<ProjectRole>(() => {
+  if (authStore.isLinkSession) return authStore.linkSession?.role || 'viewer'
+  const resolved = accessStore.resolveProjectRole(activeProjectId.value, authStore.user?.id, authStore.user?.email)
+  return resolved || 'owner'
+})
+
+const canEditColors = computed(() => {
+  if (!activeProjectId.value) return true
+  return accessStore.canRolePerform(activeProjectId.value, currentProjectRole.value, 'editColors')
+})
+
+const canMoveAndResizeElements = computed(() => {
+  if (!activeProjectId.value) return true
+  return accessStore.canRolePerform(activeProjectId.value, currentProjectRole.value, 'moveAndResizeElements')
+})
 
 const availableColors = [
   { name: 'White', value: colors.palette.white },
@@ -112,6 +148,7 @@ const availableColors = [
 ]
 
 function setPosterBackground(color: string) {
+  if (!canEditColors.value) return
   store.updatePoster({ backgroundColor: color })
 }
 

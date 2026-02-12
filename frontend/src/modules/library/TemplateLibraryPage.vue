@@ -218,6 +218,7 @@ function createProjectFromModal(payload: CreateProjectPayload) {
   if (!editorStore.activePoster) return
 
   editorStore.updatePoster(applyBrandKitToPoster(editorStore.activePoster, payload.brandKitId, payload.projectName))
+  editorStore.saveActivePoster()
 
   upsertProject({
     id: editorStore.activePoster.id,
@@ -244,6 +245,22 @@ function openTemplateFromHome(item: (typeof TEMPLATE_LIBRARY_ITEMS)[number]) {
 }
 
 function openProject(project: HomeProject) {
+  if (editorStore.loadPosterById(project.id)) {
+    if (!editorStore.activePoster) return
+
+    const loadedPoster = editorStore.activePoster
+    const resolvedName = loadedPoster.meta.title?.trim() || project.name
+    upsertProject({
+      ...project,
+      id: loadedPoster.id,
+      name: resolvedName,
+      format: loadedPoster.format,
+      updatedAt: new Date().toISOString()
+    })
+    router.push(`/editor/${loadedPoster.id}`)
+    return
+  }
+
   const brandKitId = project.brandKitId || 'hs_standard'
   const templateItem = project.templateId ? templateById.value.get(project.templateId) : undefined
 
@@ -254,22 +271,36 @@ function openProject(project: HomeProject) {
   }
   if (!editorStore.activePoster) return
 
-  editorStore.updatePoster(applyBrandKitToPoster(editorStore.activePoster, brandKitId, project.name))
+  const brandedPoster = applyBrandKitToPoster(editorStore.activePoster, brandKitId, project.name)
+  editorStore.updatePoster({
+    ...brandedPoster,
+    id: project.id,
+    meta: {
+      ...editorStore.activePoster.meta,
+      ...(brandedPoster.meta || {}),
+      title: project.name
+    }
+  })
+  editorStore.saveActivePoster()
 
   upsertProject({
     ...project,
-    id: editorStore.activePoster.id,
+    id: project.id,
     brandKitId,
+    format: editorStore.activePoster.format,
     updatedAt: new Date().toISOString()
   })
-  router.push(`/editor/${editorStore.activePoster.id}`)
+  router.push(`/editor/${project.id}`)
 }
 
 function duplicateProject(project: HomeProject) {
   const copyName = `${project.name} (Kopie)`
+  const copyId = crypto.randomUUID()
+  editorStore.duplicateStoredPoster(project.id, copyId, copyName)
+
   upsertProject({
     ...project,
-    id: crypto.randomUUID(),
+    id: copyId,
     name: copyName,
     updatedAt: new Date().toISOString()
   })
@@ -279,6 +310,7 @@ function deleteProject(project: HomeProject) {
   const accepted = window.confirm(`Projekt "${project.name}" wirklich löschen?`)
   if (!accepted) return
   removeProject(project.id)
+  editorStore.deleteStoredPoster(project.id)
 }
 
 function showAllProjects() {

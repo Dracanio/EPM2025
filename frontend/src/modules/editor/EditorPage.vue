@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, computed, ref, nextTick } from 'vue'
+import { onBeforeUnmount, computed, ref, nextTick, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import Sidebar from './Sidebar.vue'
 import PosterCanvas from './PosterCanvas.vue'
@@ -11,6 +11,7 @@ import { useProjectAccessStore } from '@/core/store/useProjectAccessStore'
 import { downloadPdf } from '@/core/utils/exportPdf'
 import type { PosterFormat } from '@/core/models/poster'
 import type { ProjectRole } from '@/core/models/accessControl'
+import { Lock } from 'lucide-vue-next'
 
 const store = useEditorStore()
 const authStore = useAuthStore()
@@ -42,6 +43,12 @@ const canManagePages = computed(() => {
   const projectId = store.activePoster?.id
   if (!projectId) return true
   return accessStore.canRolePerform(projectId, currentProjectRole.value, 'managePages')
+})
+
+const canMoveAndResizeElements = computed(() => {
+  const projectId = store.activePoster?.id
+  if (!projectId) return true
+  return accessStore.canRolePerform(projectId, currentProjectRole.value, 'moveAndResizeElements')
 })
 
 const currentFormat = computed(() => {
@@ -76,6 +83,9 @@ function handlePrint() {
 }
 
 const isExporting = ref(false)
+const saveState = ref<'idle' | 'saving' | 'saved' | 'error'>('idle')
+let autosaveTimeoutId: number | null = null
+let saveBadgeTimeoutId: number | null = null
 
 async function handleExportPdf() {
   isExporting.value = true
@@ -87,32 +97,140 @@ async function handleExportPdf() {
   }, 500)
 }
 
-onMounted(() => {
-  if (authStore.isLinkSession && authStore.linkSession?.projectId) {
-    if (!store.activePoster || store.activePoster.id !== authStore.linkSession.projectId) {
+function ensureProjectAccess(projectId: string) {
+  accessStore.ensureProjectAccess({
+    projectId,
+    ownerId: authStore.user?.id || 'shared-owner',
+    ownerName: authStore.user?.name || 'Projekt Owner',
+    ownerEmail: authStore.user?.email || 'owner@poster-designer.app'
+  })
+}
+
+function loadPosterForSharedLink(projectId: string) {
+  if (!store.activePoster || store.activePoster.id !== projectId) {
+    const hasStoredPoster = store.loadPosterById(projectId)
+    if (!hasStoredPoster) {
       store.initPoster('A4')
       if (store.activePoster) {
         store.updatePoster({
-          id: authStore.linkSession.projectId,
+          id: projectId,
           meta: {
             ...store.activePoster.meta,
             title: 'Geteiltes Projekt'
           }
         })
+        store.saveActivePoster()
       }
     }
-    accessStore.ensureProjectAccess({
-      projectId: authStore.linkSession.projectId,
-      ownerId: 'shared-owner',
-      ownerName: 'Projekt Owner',
-      ownerEmail: 'owner@poster-designer.app'
-    })
+  }
+  ensureProjectAccess(projectId)
+}
+
+function loadPosterForEditorRoute(posterId: string) {
+  if (!store.activePoster || store.activePoster.id !== posterId) {
+    const hasStoredPoster = store.loadPosterById(posterId)
+    if (!hasStoredPoster) {
+      store.initPoster('A4')
+      if (store.activePoster) {
+        store.updatePoster({
+          id: posterId,
+          meta: {
+            ...store.activePoster.meta,
+            title: 'Neues Projekt'
+          }
+        })
+        store.saveActivePoster()
+      }
+    }
+  }
+  ensureProjectAccess(posterId)
+}
+
+function ensurePosterForCurrentRoute() {
+  if (authStore.isLinkSession && authStore.linkSession?.projectId) {
+    loadPosterForSharedLink(authStore.linkSession.projectId)
+    return
+  }
+
+  const posterId = typeof route.params.posterId === 'string' ? route.params.posterId : ''
+  if (posterId) {
+    loadPosterForEditorRoute(posterId)
     return
   }
 
   if (!store.activePoster) {
     store.initPoster('A4')
   }
+}
+
+function clearSaveTimers() {
+  if (autosaveTimeoutId !== null) {
+    window.clearTimeout(autosaveTimeoutId)
+    autosaveTimeoutId = null
+  }
+  if (saveBadgeTimeoutId !== null) {
+    window.clearTimeout(saveBadgeTimeoutId)
+    saveBadgeTimeoutId = null
+  }
+}
+
+function setSavedBadge() {
+  saveState.value = 'saved'
+  if (saveBadgeTimeoutId !== null) window.clearTimeout(saveBadgeTimeoutId)
+  saveBadgeTimeoutId = window.setTimeout(() => {
+    if (saveState.value === 'saved') saveState.value = 'idle'
+  }, 1300)
+}
+
+function persistPosterNow() {
+  if (!canEditProject.value || !store.activePoster) return
+  saveState.value = 'saving'
+  const persisted = store.saveActivePoster()
+  if (!persisted) {
+    saveState.value = 'error'
+    return
+  }
+  setSavedBadge()
+}
+
+function scheduleAutosave() {
+  if (!canEditProject.value || !store.activePoster) return
+  if (autosaveTimeoutId !== null) window.clearTimeout(autosaveTimeoutId)
+  saveState.value = 'saving'
+
+  autosaveTimeoutId = window.setTimeout(() => {
+    const persisted = store.saveActivePoster()
+    if (!persisted) {
+      saveState.value = 'error'
+      autosaveTimeoutId = null
+      return
+    }
+    autosaveTimeoutId = null
+    setSavedBadge()
+  }, 700)
+}
+
+watch(
+  () => [route.name, route.params.posterId, authStore.linkSession?.projectId, authStore.sessionMode],
+  () => {
+    ensurePosterForCurrentRoute()
+  },
+  { immediate: true }
+)
+
+watch(
+  () => store.activePoster,
+  () => {
+    scheduleAutosave()
+  },
+  { deep: true }
+)
+
+onBeforeUnmount(() => {
+  if (store.isDirty && canEditProject.value) {
+    store.saveActivePoster()
+  }
+  clearSaveTimers()
 })
 
 function goLoginFromShared() {
@@ -205,7 +323,8 @@ function goLoginFromShared() {
                 :disabled="!canManagePages"
                 @click="store.addPage()"
               >
-                +
+                <span v-if="canManagePages">+</span>
+                <Lock v-else :size="12" />
               </button>
               <button
                 v-if="store.activePoster.pages.length > 1"
@@ -215,14 +334,25 @@ function goLoginFromShared() {
                 :disabled="!canManagePages"
                 @click="store.deletePage(store.activePageId!)"
               >
-                x
+                <span v-if="canManagePages">x</span>
+                <Lock v-else :size="12" />
               </button>
             </div>
-            <div v-if="!canManagePages" class="small text-secondary fw-semibold">Seitenverwaltung fuer deine Rolle deaktiviert</div>
+            <div v-if="!canManagePages" class="small text-secondary fw-semibold d-inline-flex align-items-center gap-1">
+              <Lock :size="13" />
+              Seitenverwaltung fuer deine Rolle deaktiviert
+            </div>
           </div>
           <div v-else class="small text-secondary fw-semibold">Ansichtsmodus: Bearbeitung deaktiviert</div>
 
           <div class="d-flex align-items-center gap-2">
+            <button v-if="canEditProject" type="button" class="btn btn-outline-secondary btn-sm" @click="persistPosterNow">
+              <span v-if="saveState === 'saving'">Speichert...</span>
+              <span v-else>Speichern</span>
+            </button>
+            <span v-if="canEditProject && saveState === 'saved'" class="small text-success fw-semibold">Gespeichert</span>
+            <span v-if="canEditProject && saveState === 'error'" class="small text-danger fw-semibold">Speichern fehlgeschlagen</span>
+
             <div class="input-group input-group-sm" style="width: 120px;">
               <button type="button" class="btn btn-outline-secondary" @click="store.zoomOut()">-</button>
               <span class="form-control text-center bg-white">{{ Math.round(store.zoomLevel * 100) }}%</span>
@@ -243,7 +373,7 @@ function goLoginFromShared() {
         <Sidebar v-if="canEditProject" />
 
         <main class="editor-canvas">
-          <PosterCanvas v-if="store.activePoster" :read-only="isViewerMode" />
+          <PosterCanvas v-if="store.activePoster" :read-only="isViewerMode" :allow-move-resize="canMoveAndResizeElements" />
         </main>
 
         <aside class="editor-right" v-if="canEditProject">

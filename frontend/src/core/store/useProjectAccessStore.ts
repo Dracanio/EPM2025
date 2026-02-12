@@ -5,6 +5,7 @@ import {
   type EditorPermissionKey,
   type EditorPermissionState,
   type InviteTeamMemberInput,
+  type ProjectTeamAccess,
   type ProjectAccessSettings,
   type ProjectRole,
   type ShareLink,
@@ -90,6 +91,30 @@ function normalizeShareLink(value: unknown): ShareLink | null {
   }
 }
 
+function normalizeProjectTeamAccess(value: unknown): ProjectTeamAccess | null {
+  if (!value || typeof value !== 'object') return null
+  const candidate = value as Partial<ProjectTeamAccess>
+  if (typeof candidate.id !== 'string') return null
+  if (typeof candidate.teamId !== 'string') return null
+  if (typeof candidate.teamName !== 'string') return null
+  if (!isShareLinkRole(candidate.role)) return null
+  if (!Array.isArray(candidate.memberEmails)) return null
+
+  const memberEmails = candidate.memberEmails
+    .filter((entry): entry is string => typeof entry === 'string')
+    .map((entry) => entry.trim().toLowerCase())
+    .filter((entry, index, values) => entry.length > 0 && values.indexOf(entry) === index)
+
+  return {
+    id: candidate.id,
+    teamId: candidate.teamId,
+    teamName: candidate.teamName,
+    role: candidate.role,
+    memberEmails,
+    updatedAt: typeof candidate.updatedAt === 'string' ? candidate.updatedAt : new Date().toISOString()
+  }
+}
+
 function normalizeAccessSettings(value: unknown): ProjectAccessSettings | null {
   if (!value || typeof value !== 'object') return null
   const candidate = value as Partial<ProjectAccessSettings>
@@ -125,9 +150,16 @@ function normalizeAccessSettings(value: unknown): ProjectAccessSettings | null {
     ? candidate.shareLinks.map((link) => normalizeShareLink(link)).filter((link): link is ShareLink => link !== null)
     : []
 
+  const teamAccesses = Array.isArray(candidate.teamAccesses)
+    ? candidate.teamAccesses
+        .map((entry) => normalizeProjectTeamAccess(entry))
+        .filter((entry): entry is ProjectTeamAccess => entry !== null)
+    : []
+
   return {
     projectId: candidate.projectId,
     members,
+    teamAccesses,
     editorPermissions: permissions,
     shareLinks,
     updatedAt: typeof candidate.updatedAt === 'string' ? candidate.updatedAt : new Date().toISOString()
@@ -172,6 +204,7 @@ export const useProjectAccessStore = defineStore('projectAccess', () => {
     byProjectId.value[input.projectId] = {
       projectId: input.projectId,
       members: createSeedMembers(input),
+      teamAccesses: [],
       editorPermissions: createDefaultEditorPermissions(),
       shareLinks: [],
       updatedAt: new Date().toISOString()
@@ -210,6 +243,67 @@ export const useProjectAccessStore = defineStore('projectAccess', () => {
     if (!member || member.role === 'owner') return
 
     member.role = role
+    projectAccess.updatedAt = new Date().toISOString()
+    persist()
+  }
+
+  function addTeamAccess(
+    projectId: string,
+    payload: { teamId: string; teamName: string; role: ShareLinkRole; memberEmails: string[] }
+  ) {
+    const projectAccess = byProjectId.value[projectId]
+    if (!projectAccess) return false
+
+    const normalizedEmails = payload.memberEmails
+      .map((email) => email.trim().toLowerCase())
+      .filter((email, index, values) => email.length > 0 && values.indexOf(email) === index)
+
+    const now = new Date().toISOString()
+    const existing = projectAccess.teamAccesses.find((entry) => entry.teamId === payload.teamId)
+    if (existing) {
+      existing.teamName = payload.teamName
+      existing.role = payload.role
+      existing.memberEmails = normalizedEmails
+      existing.updatedAt = now
+      projectAccess.updatedAt = now
+      persist()
+      return true
+    }
+
+    projectAccess.teamAccesses.unshift({
+      id: crypto.randomUUID(),
+      teamId: payload.teamId,
+      teamName: payload.teamName,
+      role: payload.role,
+      memberEmails: normalizedEmails,
+      updatedAt: now
+    })
+    projectAccess.updatedAt = now
+    persist()
+    return true
+  }
+
+  function updateTeamAccessRole(projectId: string, accessId: string, role: ShareLinkRole) {
+    const projectAccess = byProjectId.value[projectId]
+    if (!projectAccess) return
+
+    const target = projectAccess.teamAccesses.find((entry) => entry.id === accessId)
+    if (!target) return
+
+    target.role = role
+    target.updatedAt = new Date().toISOString()
+    projectAccess.updatedAt = target.updatedAt
+    persist()
+  }
+
+  function removeTeamAccess(projectId: string, accessId: string) {
+    const projectAccess = byProjectId.value[projectId]
+    if (!projectAccess) return
+
+    const nextValues = projectAccess.teamAccesses.filter((entry) => entry.id !== accessId)
+    if (nextValues.length === projectAccess.teamAccesses.length) return
+
+    projectAccess.teamAccesses = nextValues
     projectAccess.updatedAt = new Date().toISOString()
     persist()
   }
@@ -266,6 +360,18 @@ export const useProjectAccessStore = defineStore('projectAccess', () => {
     persist()
   }
 
+  function deleteShareLink(projectId: string, linkId: string) {
+    const projectAccess = byProjectId.value[projectId]
+    if (!projectAccess) return
+
+    const nextLinks = projectAccess.shareLinks.filter((entry) => entry.id !== linkId)
+    if (nextLinks.length === projectAccess.shareLinks.length) return
+
+    projectAccess.shareLinks = nextLinks
+    projectAccess.updatedAt = new Date().toISOString()
+    persist()
+  }
+
   function findAccessByToken(token: string): ShareLinkAccessResult | null {
     if (!token) return null
     for (const [projectId, access] of Object.entries(byProjectId.value)) {
@@ -283,7 +389,16 @@ export const useProjectAccessStore = defineStore('projectAccess', () => {
 
     const normalizedEmail = email?.trim().toLowerCase()
     const member = projectAccess.members.find((entry) => entry.id === userId || entry.email.trim().toLowerCase() === normalizedEmail)
-    return member?.role || null
+    if (member?.role) return member.role
+
+    if (!normalizedEmail) return null
+    let resolvedTeamRole: ProjectRole | null = null
+    for (const entry of projectAccess.teamAccesses) {
+      if (!entry.memberEmails.includes(normalizedEmail)) continue
+      if (entry.role === 'editor') return 'editor'
+      resolvedTeamRole = 'viewer'
+    }
+    return resolvedTeamRole
   }
 
   function canRolePerform(projectId: string, role: ProjectRole, permissionKey: EditorPermissionKey) {
@@ -300,10 +415,14 @@ export const useProjectAccessStore = defineStore('projectAccess', () => {
     getProjectAccess,
     addMember,
     updateMemberRole,
+    addTeamAccess,
+    updateTeamAccessRole,
+    removeTeamAccess,
     toggleEditorPermission,
     createShareLink,
     updateShareLinkRole,
     toggleShareLink,
+    deleteShareLink,
     findAccessByToken,
     resolveProjectRole,
     canRolePerform,

@@ -1,5 +1,6 @@
 export type ProjectRole = 'owner' | 'editor' | 'viewer'
 export type ShareLinkRole = Extract<ProjectRole, 'editor' | 'viewer'>
+export type TeamAccessRole = ShareLinkRole
 
 export type EditorPermissionCategory = 'content' | 'assets' | 'project'
 
@@ -38,6 +39,7 @@ export interface EditorPermissionDefinition {
 export interface ProjectAccessSettings {
   projectId: string
   members: TeamMember[]
+  teamAccesses: ProjectTeamAccess[]
   editorPermissions: EditorPermissionState
   shareLinks: ShareLink[]
   updatedAt: string
@@ -49,6 +51,15 @@ export interface ShareLink {
   role: ShareLinkRole
   isActive: boolean
   createdAt: string
+  updatedAt: string
+}
+
+export interface ProjectTeamAccess {
+  id: string
+  teamId: string
+  teamName: string
+  role: TeamAccessRole
+  memberEmails: string[]
   updatedAt: string
 }
 
