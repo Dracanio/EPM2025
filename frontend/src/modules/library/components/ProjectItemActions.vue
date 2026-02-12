@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onBeforeUnmount, onMounted, ref } from 'vue'
-import { MoreVertical } from 'lucide-vue-next'
+import { Copy, MoreHorizontal, Trash2 } from 'lucide-vue-next'
 
 type ActionTone = 'default' | 'danger'
 
@@ -38,6 +38,12 @@ function toggleMenu() {
   isOpen.value = !isOpen.value
 }
 
+function iconForAction(actionId: string) {
+  if (actionId === 'delete') return Trash2
+  if (actionId === 'duplicate') return Copy
+  return MoreHorizontal
+}
+
 function onDocumentClick(event: MouseEvent) {
   const target = event.target as Node | null
   if (!target || !rootRef.value) return
@@ -65,8 +71,8 @@ onBeforeUnmount(() => {
 
 <template>
   <div ref="rootRef" class="project-actions" @click.stop>
-    <button type="button" class="project-actions-trigger btn btn-light rounded-circle" @click.stop="toggleMenu">
-      <MoreVertical :size="16" />
+    <button type="button" class="project-actions-trigger btn btn-light" @click.stop="toggleMenu">
+      <MoreHorizontal :size="16" />
     </button>
 
     <div v-if="isOpen" class="project-actions-menu card shadow-sm">
@@ -78,6 +84,7 @@ onBeforeUnmount(() => {
         :class="item.tone === 'danger' ? 'text-danger' : 'text-body'"
         @click.stop="selectAction(item.id)"
       >
+        <component :is="iconForAction(item.id)" :size="14" class="project-actions-icon" />
         {{ item.label }}
       </button>
     </div>
@@ -91,39 +98,52 @@ onBeforeUnmount(() => {
 }
 
 .project-actions-trigger {
-  width: 38px;
-  height: 38px;
+  width: 2.2rem;
+  height: 2.2rem;
+  padding: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: #4d4660;
-  background: rgba(255, 255, 255, 0.96);
+  color: #4a4560;
+  background: rgba(255, 255, 255, 0.92);
   border: 1px solid var(--color-border-strong);
-  font-size: 1rem;
+  border-radius: 0.72rem;
+  box-shadow: 0 0.3rem 0.8rem rgba(20, 24, 35, 0.08);
 }
 
 .project-actions-trigger:hover {
   color: var(--color-brand-indigo);
   background: #ffffff;
+  border-color: var(--color-brand-indigo);
 }
 
 .project-actions-menu {
   position: absolute;
   top: calc(100% + 0.4rem);
   right: 0;
-  min-width: 9.4rem;
-  padding: 0.25rem;
+  min-width: 10.25rem;
+  padding: 0.3rem;
   z-index: 220;
-  border: 1px solid var(--color-border-subtle);
+  border: 1px solid var(--color-border-strong);
+  border-radius: 0.8rem;
 }
 
 .project-actions-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
   font-size: 0.9rem;
-  font-weight: 500;
-  padding: 0.45rem 0.6rem;
+  font-weight: 600;
+  padding: 0.5rem 0.6rem;
+  border-radius: 0.55rem;
+}
+
+.project-actions-icon {
+  flex-shrink: 0;
+  opacity: 0.9;
 }
 
 .project-actions-item:hover {
-  background: rgba(89, 82, 225, 0.1);
+  background: rgba(89, 82, 225, 0.11);
 }
 </style>

@@ -18,8 +18,8 @@
     </div>
 
     <div>
-      <label class="inspector-label">Groesse (Vorgeschlagen)</label>
-      <select v-model.number="localFontSize" class="form-select form-select-sm" @change="update">
+      <label class="inspector-label">Groesse</label>
+      <select v-model.number="localFontSize" class="form-select form-select-sm" @change="onPresetSizeChange">
         <option :value="typography.sizes.presentationTitle">
           Praesentationstitel ({{ typography.sizes.presentationTitle }}pt)
         </option>
@@ -29,6 +29,21 @@
         <option :value="typography.sizes.caption">Bildunterschrift ({{ typography.sizes.caption }}pt)</option>
         <option v-if="!isStandardSize" :value="localFontSize">Benutzerdefiniert ({{ localFontSize }}pt)</option>
       </select>
+
+      <div class="input-group input-group-sm mt-2">
+        <span class="input-group-text">Eigene pt</span>
+        <input
+          v-model.number="customFontSizeInput"
+          type="number"
+          class="form-control"
+          :min="MIN_FONT_SIZE"
+          :max="MAX_FONT_SIZE"
+          @blur="applyCustomFontSize"
+          @keydown.enter.prevent="applyCustomFontSize"
+        />
+        <button type="button" class="btn btn-outline-secondary" @click="applyCustomFontSize">Anwenden</button>
+      </div>
+      <p class="small text-secondary mt-1 mb-0">Eigene Werte ueberschreiben die vorgeschlagenen Groessen.</p>
     </div>
 
     <div>
@@ -146,10 +161,12 @@ const props = defineProps<{
 }>()
 
 const store = useEditorStore()
+const MIN_FONT_SIZE = 8
+const MAX_FONT_SIZE = 320
 
 const localText = ref(props.element.text)
-const localVariant = ref(props.element.variant)
 const localFontSize = ref(props.element.fontSize)
+const customFontSizeInput = ref(props.element.fontSize)
 const localFontFamily = ref(props.element.fontFamily || typography.fontFamily.body)
 const localAlign = ref(props.element.align)
 const localColor = ref(props.element.color)
@@ -172,8 +189,8 @@ watch(
   () => props.element,
   (newVal) => {
     localText.value = newVal.text
-    localVariant.value = newVal.variant
     localFontSize.value = newVal.fontSize
+    customFontSizeInput.value = newVal.fontSize
     localFontFamily.value = newVal.fontFamily || typography.fontFamily.body
     localAlign.value = newVal.align
     localColor.value = newVal.color || '#000000'
@@ -199,6 +216,24 @@ function update() {
     fontStyle: localFontStyle.value,
     backgroundColor: localBackgroundColor.value
   })
+}
+
+function normalizeFontSize(value: number) {
+  if (!Number.isFinite(value)) return MIN_FONT_SIZE
+  return Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, Math.round(value)))
+}
+
+function onPresetSizeChange() {
+  localFontSize.value = normalizeFontSize(localFontSize.value)
+  customFontSizeInput.value = localFontSize.value
+  update()
+}
+
+function applyCustomFontSize() {
+  const normalized = normalizeFontSize(customFontSizeInput.value)
+  customFontSizeInput.value = normalized
+  localFontSize.value = normalized
+  update()
 }
 
 function setAlign(align: 'left' | 'center' | 'right') {

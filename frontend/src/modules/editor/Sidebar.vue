@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useEditorStore } from '@/core/store/useEditorStore'
 import type { TextElement, ImageElement } from '@/core/models/element'
 import { GripVertical, Heading1, Image, Layers, Settings2, Trash2, Type } from 'lucide-vue-next'
+import ProjectSettingsPanel from './settings/ProjectSettingsPanel.vue'
 
 const editorStore = useEditorStore()
 
@@ -295,18 +296,7 @@ function onLayerDragEnd() {
           <p class="small text-secondary mb-0">Neue Bilder werden als eigene Ebene hinzugefuegt.</p>
         </div>
 
-        <div v-else class="vstack gap-2">
-          <div class="border rounded p-2 bg-light">
-            <div class="small text-secondary">Format</div>
-            <div class="fw-semibold">{{ editorStore.activePoster?.format || '-' }}</div>
-          </div>
-          <div class="border rounded p-2 bg-light">
-            <div class="small text-secondary">Dokument</div>
-            <div class="fw-semibold">
-              {{ editorStore.activePoster?.widthMm || 0 }} x {{ editorStore.activePoster?.heightMm || 0 }} mm
-            </div>
-          </div>
-        </div>
+        <ProjectSettingsPanel v-else />
       </div>
 
     </section>

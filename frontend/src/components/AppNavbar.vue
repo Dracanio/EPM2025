@@ -125,7 +125,7 @@ watch(
         <div class="d-flex align-items-center gap-2 gap-lg-3 flex-wrap">
           <button type="button" class="btn p-0 d-inline-flex align-items-center gap-2 border-0 app-navbar-brand-btn" @click="goHome">
             <span class="app-navbar-logo">P</span>
-            <span class="app-navbar-brand">Poster Studio</span>
+            <span class="app-navbar-brand">Poster Designer</span>
           </button>
 
           <nav class="d-flex align-items-center gap-2">

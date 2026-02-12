@@ -485,13 +485,14 @@ function getProjectTemplate(project: HomeProject) {
 .home-create-btn {
   font-size: 1rem;
   font-weight: 700;
-  border: 0;
-  background: linear-gradient(130deg, var(--color-brand-primary), var(--color-brand-violet));
-  box-shadow: 0 0.55rem 1.1rem rgba(147, 19, 206, 0.22);
+  border: 1px solid var(--color-brand-indigo);
+  background: var(--color-brand-indigo);
+  box-shadow: 0 0.45rem 1rem rgba(89, 82, 225, 0.22);
 }
 
 .home-create-btn:hover {
-  filter: brightness(1.04);
+  border-color: #4d46ce;
+  background: #4d46ce;
 }
 
 .home-create-btn:focus-visible {
