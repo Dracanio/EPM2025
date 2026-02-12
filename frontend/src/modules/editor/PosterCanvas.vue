@@ -1,5 +1,5 @@
 <template>
-  <div :id="containerId" class="shadow-2xl relative bg-white transition-all duration-200 ease-out" 
+  <div :id="containerId" class="poster-stage-shell" 
        :style="{ 
           width: computedStageWidth + 'px', 
           height: computedStageHeight + 'px' 

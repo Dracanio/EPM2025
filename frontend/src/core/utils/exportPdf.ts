@@ -25,10 +25,11 @@ export async function downloadPdf(containerClass: string = 'poster-print-page', 
 
     for (let i = 0; i < elements.length; i++) {
         const element = elements[i];
+        if (!element) continue;
         
         // Show the element temporarily if it's hidden (though print view should be accessible in DOM)
         // Note: html2canvas requires the element to be in the DOM and visible. 
-        // Our 'print:block' elements might be hidden in screen mode.
+        // Print elements may be hidden in screen mode.
         // We might need to force them visible or clone them?
         // Actually, if they are display:none, html2canvas renders nothing.
         // Strategy: Temporarily unhide the print container for export?

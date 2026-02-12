@@ -1,76 +1,304 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
- 
-@layer base {
+@import 'bootstrap/dist/css/bootstrap.min.css';
+
+:root {
+  --app-bg: #f3f4f6;
+  --panel-border: #dfe3e8;
+  --text-muted: #68707a;
+  --editor-topbar-height: 72px;
+  --editor-left-width: 320px;
+  --editor-right-width: 320px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: "PT Sans", Arial, sans-serif;
+  background-color: var(--app-bg);
+  color: #212529;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.display-1,
+.display-2,
+.display-3,
+.display-4,
+.display-5,
+.display-6 {
+  font-family: "Roboto Slab", Georgia, serif;
+}
+
+a {
+  color: inherit;
+}
+
+.app-page {
+  min-height: 100%;
+}
+
+.app-frame-header {
+  margin-bottom: 1.5rem;
+}
+
+.section-card {
+  border: 1px solid var(--panel-border);
+}
+
+.section-card-clickable {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.section-card-clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0.5rem 1.25rem rgba(0, 0, 0, 0.12);
+}
+
+.inspector-label {
+  display: block;
+  margin-bottom: 0.35rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.color-swatch {
+  width: 2rem;
+  height: 2rem;
+  border: 1px solid #ced4da;
+  border-radius: 50%;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.color-swatch.is-active {
+  box-shadow: 0 0 0 2px rgba(13, 110, 253, 0.3);
+}
+
+.color-swatch.transparent::before {
+  content: "";
+  width: 1.2rem;
+  height: 1px;
+  background: #dc3545;
+  transform: rotate(45deg);
+}
+
+.editor-shell {
+  position: relative;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.editor-topbar {
+  position: sticky;
+  top: 0;
+  height: var(--editor-topbar-height);
+  min-height: var(--editor-topbar-height);
+  background: #ffffff;
+  border-bottom: 1px solid var(--panel-border);
+  z-index: 20;
+}
+
+.editor-main {
+  height: calc(100vh - var(--editor-topbar-height));
+  min-height: 0;
+  display: flex;
+  overflow: hidden;
+}
+
+.editor-left,
+.editor-right {
+  background: #ffffff;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-shrink: 0;
+}
+
+.editor-left {
+  width: var(--editor-left-width);
+  min-width: var(--editor-left-width);
+  border-right: 1px solid var(--panel-border);
+}
+
+.editor-right {
+  width: var(--editor-right-width);
+  min-width: var(--editor-right-width);
+  border-left: 1px solid var(--panel-border);
+  flex-direction: column;
+}
+
+.editor-toolrail {
+  width: 58px;
+  min-width: 58px;
+  border-right: 1px solid var(--panel-border);
+}
+
+.editor-rail-button {
+  width: 38px;
+  height: 38px;
+}
+
+.editor-context {
+  min-width: 0;
+}
+
+.editor-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.editor-canvas {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  background: #eceff3;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 1.5rem;
+}
+
+.poster-stage-shell {
+  position: relative;
+  background: #ffffff;
+  border-radius: 0.5rem;
+  box-shadow: 0 0.85rem 2rem rgba(0, 0, 0, 0.14);
+  transition: width 0.2s ease, height 0.2s ease;
+}
+
+.panel-divider {
+  width: 1px;
+  background: #ced4da;
+  margin-inline: 0.3rem;
+}
+
+.editor-export-layer {
+  display: none;
+}
+
+.editor-export-layer.is-exporting {
+  display: block;
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 30;
+  overflow: hidden;
+}
+
+@media (max-width: 1199px) {
   :root {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
- 
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
- 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
- 
-    --primary: 222.2 47.4% 11.2%;
-    --primary-foreground: 210 40% 98%;
- 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
- 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
- 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
- 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
- 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
- 
-    --radius: 0.5rem;
-  }
- 
-  .dark {
-    --background: 222.2 84% 4.9%;
-    --foreground: 210 40% 98%;
- 
-    --card: 222.2 84% 4.9%;
-    --card-foreground: 210 40% 98%;
- 
-    --popover: 222.2 84% 4.9%;
-    --popover-foreground: 210 40% 98%;
- 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
- 
-    --secondary: 217.2 32.6% 17.5%;
-    --secondary-foreground: 210 40% 98%;
- 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
- 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
- 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
- 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
+    --editor-left-width: 300px;
+    --editor-right-width: 300px;
   }
 }
- 
-@layer base {
-  * {
-    @apply border-border;
+
+@media (max-width: 991px) {
+  .editor-shell {
+    height: auto;
+    min-height: 100vh;
+    overflow: visible;
   }
+
+  .editor-topbar {
+    height: auto;
+    min-height: 0;
+  }
+
+  .editor-main {
+    height: auto;
+    min-height: calc(100vh - var(--editor-topbar-height));
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .editor-left,
+  .editor-right {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .editor-left {
+    min-height: 260px;
+    border-right: 0;
+    border-bottom: 1px solid var(--panel-border);
+  }
+
+  .editor-right {
+    min-height: 280px;
+    border-left: 0;
+    border-top: 1px solid var(--panel-border);
+  }
+
+  .editor-canvas {
+    min-height: 420px;
+  }
+}
+
+@media print {
+  @page {
+    margin: 0;
+    size: auto;
+  }
+
   body {
-    @apply bg-background text-foreground;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    background: #ffffff;
+  }
+
+  .editor-topbar,
+  .editor-left,
+  .editor-right,
+  .editor-canvas {
+    display: none !important;
+  }
+
+  .editor-shell {
+    height: auto;
+    display: block;
+  }
+
+  .editor-export-layer {
+    display: block !important;
+    position: static !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+  }
+
+  #poster-stage-container {
+    box-shadow: none !important;
+    margin: 0 auto;
+  }
+
+  .poster-print-page {
+    margin-bottom: 2rem;
+    break-after: page;
+  }
+
+  ::-webkit-scrollbar {
+    display: none;
   }
 }

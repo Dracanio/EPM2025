@@ -1,15 +1,30 @@
 <script setup lang="ts">
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/core/store/useAuthStore'
 import { useEditorStore } from '@/core/store/useEditorStore'
 import type { TextElement, ImageElement } from '@/core/models/element'
-import InspectorPanel from './Inspectors/InspectorPanel.vue'
-import { ref } from 'vue'
-import { Type, Image, Heading1 } from 'lucide-vue-next'
+import { Heading1, Image, Layers, Settings2, Type } from 'lucide-vue-next'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const editorStore = useEditorStore()
+
+type PanelState = 'layers' | 'text' | 'image' | 'settings'
+
+const activePanel = ref<PanelState>('layers')
+const fileInput = ref<HTMLInputElement | null>(null)
+
+const panelTitle = computed(() => {
+  if (activePanel.value === 'layers') return 'Ebenen'
+  if (activePanel.value === 'text') return 'Text'
+  if (activePanel.value === 'image') return 'Bilder'
+  return 'Einstellungen'
+})
+
+const layers = computed(() => {
+  return [...editorStore.currentElements].reverse()
+})
 
 function addTitle() {
   const newTitle: TextElement = {
@@ -42,14 +57,14 @@ function addText() {
     name: 'Text Layer',
     xMm: 20,
     yMm: 90,
-    widthMm: 170, // Wider by default
+    widthMm: 170,
     heightMm: 40,
     rotationDeg: 0,
     locked: false,
-    text: 'Dies ist ein Textblock.\nHier können Sie Ihren Inhalt eingeben.\nMehrere Zeilen sind möglich.',
+    text: 'Dies ist ein Textblock.\nHier koennen Sie Ihren Inhalt eingeben.\nMehrere Zeilen sind moeglich.',
     variant: 'body',
     align: 'left',
-    fontSize: 17, // 17pt as per styleguide body
+    fontSize: 17,
     fontFamily: '"PT Sans", sans-serif',
     color: '#000000',
     fontWeight: 'normal',
@@ -59,92 +74,174 @@ function addText() {
   editorStore.addElement(newText)
 }
 
-const fileInput = ref<HTMLInputElement | null>(null);
-
 function triggerImageUpload() {
-  fileInput.value?.click();
+  fileInput.value?.click()
 }
 
 function handleImageUpload(event: Event) {
-  const target = event.target as HTMLInputElement;
+  const target = event.target as HTMLInputElement
   if (target.files && target.files[0]) {
-    const file = target.files[0];
-    const reader = new FileReader();
+    const file = target.files[0]
+    const reader = new FileReader()
+
     reader.onload = (e) => {
-      const src = e.target?.result as string;
+      const src = e.target?.result as string
       const newImage: ImageElement = {
         id: crypto.randomUUID(),
         type: 'image',
         name: 'Image Layer',
-        xMm: 20, // Aligned with title/text
-        yMm: 20, // Start high
-        widthMm: 170, // Full width default
-        heightMm: 60, // Default aspect, maybe adjust later based on image
+        xMm: 20,
+        yMm: 20,
+        widthMm: 170,
+        heightMm: 60,
         rotationDeg: 0,
         locked: false,
         assetId: 'upload',
-        src: src,
+        src,
         fit: 'cover'
-      };
-      
-      // Smart positioning: If we have title, move down? 
-      // For now, let's just push it. User said "Boom a picture... header... text area".
-      // Maybe defaults are: Picture at top, Title below, Text below.
-      
-      editorStore.addElement(newImage);
-    };
-    reader.readAsDataURL(file);
-    // Reset val
-    target.value = '';
+      }
+
+      editorStore.addElement(newImage)
+      activePanel.value = 'layers'
+    }
+
+    reader.readAsDataURL(file)
+    target.value = ''
   }
 }
 
-function addImage() {
-  triggerImageUpload();
+function selectLayer(id: string) {
+  editorStore.selectElement(id)
+}
+
+function layerTypeLabel(type: string) {
+  return type === 'image' ? 'Bild' : 'Text'
 }
 </script>
 
 <template>
-  <aside class="w-[300px] bg-white border-r border-gray-200 flex flex-col h-full shadow-sm z-10">
-    <div class="p-4 border-b border-gray-100">
-      <h1 class="font-bold text-red-600 flex items-center gap-2">
-        <span>Poster Editor</span>
-      </h1>
-    </div>
-    
-    <div class="flex-1 overflow-y-auto flex flex-col">
-      <!-- Tools Section -->
-      <div class="p-4 space-y-2 border-b border-gray-100 flex-none">
-        <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tools</label>
-        <button @click="addTitle" class="w-full flex items-center gap-3 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-md text-sm transition text-left group">
-          <Heading1 :size="18" class="text-gray-500 group-hover:text-red-600 transition" /> 
-          <span>Add Title</span>
-        </button>
-        <button @click="addText" class="w-full flex items-center gap-3 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-md text-sm transition text-left group">
-          <Type :size="18" class="text-gray-500 group-hover:text-red-600 transition" />
-          <span>Add Text</span>
-        </button>
-        <button @click="addImage" class="w-full flex items-center gap-3 px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-md text-sm transition text-left group">
-          <Image :size="18" class="text-gray-500 group-hover:text-red-600 transition" />
-          <span>Add Image</span>
-        </button>
-      </div>
-      
-      <!-- Properties Section -->
-      <div class="flex-1 overflow-hidden">
-        <InspectorPanel />
-      </div>
-    </div>
-    
-    <div class="p-4 border-t border-gray-100 space-y-2">
-      <button @click="router.push('/templates')" class="w-full py-2 bg-white text-gray-600 border border-gray-200 rounded hover:bg-gray-50 transition text-sm mb-1">
-        Back to Templates
+  <aside class="editor-left">
+    <nav class="editor-toolrail d-flex flex-column align-items-center gap-2 py-3 px-2">
+      <button
+        type="button"
+        class="btn btn-outline-secondary btn-sm editor-rail-button"
+        :class="{ active: activePanel === 'layers' }"
+        title="Ebenen"
+        @click="activePanel = 'layers'"
+      >
+        <Layers :size="16" />
       </button>
-      <button @click="authStore.logout(); router.push('/login')" class="w-full py-2 bg-white text-gray-600 border border-gray-200 rounded hover:bg-gray-50 transition text-sm">
-        Logout
+
+      <button
+        type="button"
+        class="btn btn-outline-secondary btn-sm editor-rail-button"
+        :class="{ active: activePanel === 'text' }"
+        title="Text"
+        @click="activePanel = 'text'"
+      >
+        <Type :size="16" />
       </button>
-    </div>
-    
-    <input type="file" ref="fileInput" class="hidden" accept="image/*" @change="handleImageUpload" />
+
+      <button
+        type="button"
+        class="btn btn-outline-secondary btn-sm editor-rail-button"
+        :class="{ active: activePanel === 'image' }"
+        title="Bilder"
+        @click="activePanel = 'image'"
+      >
+        <Image :size="16" />
+      </button>
+
+      <button
+        type="button"
+        class="btn btn-outline-secondary btn-sm editor-rail-button"
+        :class="{ active: activePanel === 'settings' }"
+        title="Einstellungen"
+        @click="activePanel = 'settings'"
+      >
+        <Settings2 :size="16" />
+      </button>
+    </nav>
+
+    <section class="editor-context d-flex flex-column flex-grow-1">
+      <header class="border-bottom p-3">
+        <h2 class="h6 mb-0">{{ panelTitle }}</h2>
+      </header>
+
+      <div class="editor-scroll p-3">
+        <div v-if="activePanel === 'layers'" class="vstack gap-2">
+          <button
+            v-for="element in layers"
+            :key="element.id"
+            type="button"
+            class="list-group-item list-group-item-action rounded border"
+            :class="{ active: editorStore.selectedElementId === element.id }"
+            @click="selectLayer(element.id)"
+          >
+            <div class="d-flex justify-content-between align-items-center">
+              <span class="small fw-semibold">{{ element.name }}</span>
+              <span class="badge text-bg-light">{{ layerTypeLabel(element.type) }}</span>
+            </div>
+          </button>
+
+          <p v-if="layers.length === 0" class="small text-secondary mb-0">
+            Keine Elemente vorhanden.
+          </p>
+        </div>
+
+        <div v-else-if="activePanel === 'text'" class="vstack gap-2">
+          <button type="button" class="btn btn-outline-secondary text-start" @click="addTitle">
+            <span class="d-flex align-items-center gap-2">
+              <Heading1 :size="16" />
+              Titel einfuegen
+            </span>
+          </button>
+          <button type="button" class="btn btn-outline-secondary text-start" @click="addText">
+            <span class="d-flex align-items-center gap-2">
+              <Type :size="16" />
+              Textblock einfuegen
+            </span>
+          </button>
+        </div>
+
+        <div v-else-if="activePanel === 'image'" class="vstack gap-2">
+          <button type="button" class="btn btn-outline-secondary text-start" @click="triggerImageUpload">
+            <span class="d-flex align-items-center gap-2">
+              <Image :size="16" />
+              Bild hochladen
+            </span>
+          </button>
+          <p class="small text-secondary mb-0">Neue Bilder werden als eigene Ebene hinzugefuegt.</p>
+        </div>
+
+        <div v-else class="vstack gap-2">
+          <div class="border rounded p-2 bg-light">
+            <div class="small text-secondary">Format</div>
+            <div class="fw-semibold">{{ editorStore.activePoster?.format || '-' }}</div>
+          </div>
+          <div class="border rounded p-2 bg-light">
+            <div class="small text-secondary">Dokument</div>
+            <div class="fw-semibold">
+              {{ editorStore.activePoster?.widthMm || 0 }} x {{ editorStore.activePoster?.heightMm || 0 }} mm
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <footer class="border-top p-3 vstack gap-2">
+        <button type="button" class="btn btn-outline-secondary btn-sm" @click="router.push('/templates')">
+          Zur Vorlagenauswahl
+        </button>
+        <button
+          type="button"
+          class="btn btn-outline-secondary btn-sm"
+          @click="authStore.logout(); router.push('/login')"
+        >
+          Logout
+        </button>
+      </footer>
+    </section>
+
+    <input type="file" ref="fileInput" class="d-none" accept="image/*" @change="handleImageUpload" />
   </aside>
 </template>

@@ -12,7 +12,7 @@ const isLoading = ref(false)
 
 async function handleLogin() {
   if (!email.value || !password.value) return
-  
+
   isLoading.value = true
   try {
     await authStore.login(email.value)
@@ -26,25 +26,41 @@ async function handleLogin() {
 </script>
 
 <template>
-  <div class="min-h-screen flex items-center justify-center bg-gray-100">
-    <div class="bg-white p-8 rounded-lg shadow-md w-96">
-      <h1 class="text-2xl font-bold mb-6 text-center text-gray-800">Poster Designer</h1>
-      <form @submit.prevent="handleLogin" class="space-y-4">
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Email</label>
-          <input v-model="email" type="email" class="mt-1 block w-full rounded-md border border-gray-300 p-2" required />
-        </div>
-        <div>
-          <label class="block text-sm font-medium text-gray-700">Password</label>
-          <input v-model="password" type="password" class="mt-1 block w-full rounded-md border border-gray-300 p-2" placeholder="******" required />
-        </div>
-        <button type="submit" 
-                class="w-full bg-red-600 text-white py-2 px-4 rounded hover:bg-red-700 transition disabled:opacity-50 flex justify-center"
-                :disabled="isLoading">
-          <span v-if="isLoading">Logging in...</span>
-          <span v-else>Login</span>
-        </button>
-      </form>
+  <div class="min-vh-100 d-flex align-items-center justify-content-center py-5 px-3">
+    <div class="card shadow-sm w-100" style="max-width: 420px;">
+      <div class="card-body p-4 p-md-5">
+        <h1 class="h3 text-center mb-4">Poster Designer</h1>
+
+        <form @submit.prevent="handleLogin" class="vstack gap-3">
+          <div>
+            <label for="email" class="form-label">Email</label>
+            <input
+              id="email"
+              v-model="email"
+              type="email"
+              class="form-control"
+              required
+            />
+          </div>
+
+          <div>
+            <label for="password" class="form-label">Password</label>
+            <input
+              id="password"
+              v-model="password"
+              type="password"
+              class="form-control"
+              placeholder="******"
+              required
+            />
+          </div>
+
+          <button type="submit" class="btn btn-danger w-100" :disabled="isLoading">
+            <span v-if="isLoading">Logging in...</span>
+            <span v-else>Login</span>
+          </button>
+        </form>
+      </div>
     </div>
   </div>
 </template>
