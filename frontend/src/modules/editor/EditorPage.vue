@@ -522,4 +522,10 @@ function goLoginFromShared() {
 .editor-shell.is-shared-shell {
   height: calc(100dvh - 53px);
 }
+
+@media print {
+  .editor-shell.is-shared-shell {
+    height: auto !important;
+  }
+}
 </style>

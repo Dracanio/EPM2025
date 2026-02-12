@@ -334,14 +334,23 @@ a {
   }
 
   html,
+  #app,
   body {
+    height: auto !important;
     margin: 0;
+    padding: 0;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
     background: #ffffff;
   }
 
+  .app-navbar,
+  .shared-link-header {
+    display: none !important;
+  }
+
   .editor-topbar,
+  .editor-main,
   .editor-left,
   .editor-right,
   .editor-canvas {
@@ -351,6 +360,9 @@ a {
   .editor-shell {
     height: auto;
     display: block;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: visible !important;
   }
 
   .editor-export-layer {
@@ -358,20 +370,27 @@ a {
     position: static !important;
     opacity: 1 !important;
     pointer-events: auto !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   .poster-stage-shell {
+    border: 0 !important;
     box-shadow: none !important;
-    margin: 0 auto;
+    margin: 0 auto !important;
   }
 
   .poster-print-page {
     margin: 0;
+    padding: 0;
     overflow: hidden;
+    page-break-inside: avoid;
+    page-break-after: always;
     break-after: page;
   }
 
   .poster-print-page:last-child {
+    page-break-after: auto;
     break-after: auto;
   }
 
