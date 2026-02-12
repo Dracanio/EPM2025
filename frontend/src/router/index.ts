@@ -23,6 +23,12 @@ const router = createRouter({
       meta: { requiresAuth: true }
     },
     {
+      path: '/projects',
+      name: 'projects',
+      component: TemplateLibraryPage,
+      meta: { requiresAuth: true }
+    },
+    {
       path: '/editor/:posterId',
       name: 'editor',
       component: EditorPage,

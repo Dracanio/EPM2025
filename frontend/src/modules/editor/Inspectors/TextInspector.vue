@@ -13,8 +13,7 @@
     <div>
       <label class="inspector-label">Schriftart</label>
       <select v-model="localFontFamily" class="form-select form-select-sm" @change="update">
-        <option :value="typography.fontFamily.headings">Roboto Slab (Ueberschriften)</option>
-        <option :value="typography.fontFamily.body">PT Sans (Fliesstext)</option>
+        <option :value="typography.fontFamily.body">PT Sans</option>
       </select>
     </div>
 

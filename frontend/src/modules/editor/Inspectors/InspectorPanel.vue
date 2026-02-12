@@ -79,40 +79,6 @@
       </div>
     </div>
 
-    <div v-if="selectedElement" class="p-3 border-top bg-light d-flex justify-content-between align-items-center">
-      <span class="small text-secondary text-uppercase fw-semibold d-inline-flex align-items-center gap-2">
-        <Layers :size="14" />
-        Ebene
-      </span>
-
-      <div class="d-flex align-items-center gap-2">
-        <button
-          type="button"
-          class="btn btn-outline-secondary btn-sm"
-          title="Nach hinten"
-          @click="store.moveElementDown(selectedElement.id)"
-        >
-          <ArrowDown :size="16" />
-        </button>
-        <button
-          type="button"
-          class="btn btn-outline-secondary btn-sm"
-          title="Nach vorne"
-          @click="store.moveElementUp(selectedElement.id)"
-        >
-          <ArrowUp :size="16" />
-        </button>
-        <div class="panel-divider"></div>
-        <button
-          type="button"
-          class="btn btn-outline-danger btn-sm"
-          title="Loeschen"
-          @click="store.deleteElement(selectedElement.id)"
-        >
-          <Trash2 :size="16" />
-        </button>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -128,11 +94,7 @@ import {
   MousePointerClick,
   AlignHorizontalJustifyCenter,
   AlignVerticalJustifyCenter,
-  Crosshair,
-  Layers,
-  ArrowUp,
-  ArrowDown,
-  Trash2
+  Crosshair
 } from 'lucide-vue-next'
 
 const store = useEditorStore()

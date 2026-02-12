@@ -1,19 +1,17 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/core/store/useAuthStore'
 import { useEditorStore } from '@/core/store/useEditorStore'
 import type { TextElement, ImageElement } from '@/core/models/element'
-import { Heading1, Image, Layers, Settings2, Type } from 'lucide-vue-next'
+import { GripVertical, Heading1, Image, Layers, Settings2, Trash2, Type } from 'lucide-vue-next'
 
-const router = useRouter()
-const authStore = useAuthStore()
 const editorStore = useEditorStore()
 
 type PanelState = 'layers' | 'text' | 'image' | 'settings'
 
 const activePanel = ref<PanelState>('layers')
 const fileInput = ref<HTMLInputElement | null>(null)
+const draggedLayerId = ref<string | null>(null)
+const dragOverLayerId = ref<string | null>(null)
 
 const panelTitle = computed(() => {
   if (activePanel.value === 'layers') return 'Ebenen'
@@ -117,6 +115,66 @@ function selectLayer(id: string) {
 function layerTypeLabel(type: string) {
   return type === 'image' ? 'Bild' : 'Text'
 }
+
+function deleteLayer(id: string) {
+  editorStore.deleteElement(id)
+}
+
+function onLayerDragStart(layerId: string, event: DragEvent) {
+  draggedLayerId.value = layerId
+  dragOverLayerId.value = null
+  if (event.dataTransfer) {
+    event.dataTransfer.effectAllowed = 'move'
+    event.dataTransfer.setData('text/plain', layerId)
+  }
+}
+
+function onLayerDragOver(layerId: string, event: DragEvent) {
+  if (!draggedLayerId.value || draggedLayerId.value === layerId) return
+  event.preventDefault()
+  dragOverLayerId.value = layerId
+  if (event.dataTransfer) {
+    event.dataTransfer.dropEffect = 'move'
+  }
+}
+
+function onLayerDrop(targetLayerId: string, event: DragEvent) {
+  event.preventDefault()
+  const sourceLayerId = draggedLayerId.value || event.dataTransfer?.getData('text/plain') || null
+  if (!sourceLayerId || sourceLayerId === targetLayerId) {
+    draggedLayerId.value = null
+    dragOverLayerId.value = null
+    return
+  }
+
+  const displayOrder = [...layers.value]
+  const sourceIndex = displayOrder.findIndex((item) => item.id === sourceLayerId)
+  const targetIndex = displayOrder.findIndex((item) => item.id === targetLayerId)
+  if (sourceIndex === -1 || targetIndex === -1) {
+    draggedLayerId.value = null
+    dragOverLayerId.value = null
+    return
+  }
+
+  const [source] = displayOrder.splice(sourceIndex, 1)
+  if (!source) {
+    draggedLayerId.value = null
+    dragOverLayerId.value = null
+    return
+  }
+  displayOrder.splice(targetIndex, 0, source)
+
+  const editorOrderIds = [...displayOrder].reverse().map((item) => item.id)
+  editorStore.reorderElementsByIds(editorOrderIds)
+
+  draggedLayerId.value = null
+  dragOverLayerId.value = null
+}
+
+function onLayerDragEnd() {
+  draggedLayerId.value = null
+  dragOverLayerId.value = null
+}
 </script>
 
 <template>
@@ -170,19 +228,42 @@ function layerTypeLabel(type: string) {
 
       <div class="editor-scroll p-3">
         <div v-if="activePanel === 'layers'" class="vstack gap-2">
-          <button
+          <div
             v-for="element in layers"
             :key="element.id"
-            type="button"
-            class="list-group-item list-group-item-action rounded border"
-            :class="{ active: editorStore.selectedElementId === element.id }"
-            @click="selectLayer(element.id)"
+            class="sidebar-layer-item d-flex align-items-center gap-2"
+            :class="{
+              'is-drag-over': dragOverLayerId === element.id && draggedLayerId !== element.id
+            }"
+            draggable="true"
+            @dragstart="onLayerDragStart(element.id, $event)"
+            @dragover="onLayerDragOver(element.id, $event)"
+            @drop="onLayerDrop(element.id, $event)"
+            @dragend="onLayerDragEnd"
           >
-            <div class="d-flex justify-content-between align-items-center">
-              <span class="small fw-semibold">{{ element.name }}</span>
+            <span class="sidebar-layer-handle" aria-hidden="true">
+              <GripVertical :size="14" />
+            </span>
+
+            <button
+              type="button"
+              class="list-group-item list-group-item-action rounded border d-flex justify-content-between align-items-center flex-grow-1 sidebar-layer-main"
+              :class="{ active: editorStore.selectedElementId === element.id }"
+              @click="selectLayer(element.id)"
+            >
+              <span class="small fw-semibold text-truncate">{{ element.name }}</span>
               <span class="badge text-bg-light">{{ layerTypeLabel(element.type) }}</span>
-            </div>
-          </button>
+            </button>
+
+            <button
+              type="button"
+              class="btn btn-outline-danger btn-sm sidebar-layer-delete"
+              title="Element loeschen"
+              @click.stop="deleteLayer(element.id)"
+            >
+              <Trash2 :size="14" />
+            </button>
+          </div>
 
           <p v-if="layers.length === 0" class="small text-secondary mb-0">
             Keine Elemente vorhanden.
@@ -228,20 +309,45 @@ function layerTypeLabel(type: string) {
         </div>
       </div>
 
-      <footer class="border-top p-3 vstack gap-2">
-        <button type="button" class="btn btn-outline-secondary btn-sm" @click="router.push('/templates')">
-          Zur Vorlagenauswahl
-        </button>
-        <button
-          type="button"
-          class="btn btn-outline-secondary btn-sm"
-          @click="authStore.logout(); router.push('/login')"
-        >
-          Logout
-        </button>
-      </footer>
     </section>
 
     <input type="file" ref="fileInput" class="d-none" accept="image/*" @change="handleImageUpload" />
   </aside>
 </template>
+
+<style scoped>
+.sidebar-layer-item {
+  min-width: 0;
+}
+
+.sidebar-layer-main {
+  min-height: 2.8rem;
+  padding: 0.55rem 0.7rem;
+}
+
+.sidebar-layer-delete {
+  width: 2.2rem;
+  height: 2.2rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.sidebar-layer-handle {
+  color: var(--color-gray-500);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+}
+
+.sidebar-layer-item:active .sidebar-layer-handle {
+  cursor: grabbing;
+}
+
+.sidebar-layer-item.is-drag-over {
+  outline: 2px solid var(--color-brand-indigo);
+  outline-offset: 2px;
+}
+</style>

@@ -29,19 +29,7 @@ export const useEditorStore = defineStore('editor', () => {
 
   // Actions
   function initPoster(format: PosterFormat = 'A4') {
-    let width = 210;
-    let height = 297;
-
-    if (format === 'A4 Landscape') {
-      width = 297;
-      height = 210;
-    } else if (format === 'Flyer') {
-       width = 100; // DIN Lang approx
-       height = 210;
-    } else if (format === 'A3') {
-       width = 297;
-       height = 420;
-    }
+    const { width, height } = getPosterDimensions(format);
 
     const titleElement: PosterElement = {
       id: crypto.randomUUID(),
@@ -57,7 +45,7 @@ export const useEditorStore = defineStore('editor', () => {
       variant: 'title',
       align: 'center',
       fontSize: 27,
-      fontFamily: '"Roboto Slab", serif',
+      fontFamily: '"PT Sans", sans-serif',
       color: '#2B2B2B',
       fontWeight: 'bold',
       fontStyle: 'normal',
@@ -98,14 +86,13 @@ export const useEditorStore = defineStore('editor', () => {
       }))
     }));
 
-    const isLandscape = template.format.includes('Landscape');
-    const width = isLandscape ? 297 : 210;
-    const height = isLandscape ? 210 : 297;
+    const templateFormat = template.format as PosterFormat;
+    const { width, height } = getPosterDimensions(templateFormat);
 
     activePoster.value = {
       id: crypto.randomUUID(),
       templateId: template.id,
-      format: template.format as PosterFormat,
+      format: templateFormat,
       widthMm: width,
       heightMm: height,
       pages: pagesCopy,
@@ -199,6 +186,19 @@ export const useEditorStore = defineStore('editor', () => {
     }
   }
 
+  function reorderElementsByIds(orderedIds: string[]) {
+    if (!activePage.value) return;
+    const current = activePage.value.elements;
+    if (orderedIds.length !== current.length) return;
+
+    const byId = new Map(current.map((element) => [element.id, element]));
+    const next = orderedIds.map((id) => byId.get(id)).filter(Boolean) as PosterElement[];
+    if (next.length !== current.length) return;
+
+    activePage.value.elements = next;
+    isDirty.value = true;
+  }
+
   function moveElementUp(id: string) {
     if (!activePage.value) return;
     const elements = activePage.value.elements;
@@ -253,19 +253,7 @@ export const useEditorStore = defineStore('editor', () => {
   function resizePoster(format: PosterFormat, orientation: 'portrait' | 'landscape') {
     if (!activePoster.value) return;
 
-    let width = 210;
-    let height = 297;
-
-    if (format === 'A4') {
-       width = 210;
-       height = 297;
-    } else if (format === 'A3') {
-       width = 297;
-       height = 420;
-    } else if (format === 'Flyer') { // DIN Lang / Flyer
-       width = 100;
-       height = 210;
-    }
+    let { width, height } = getPosterDimensions(format);
 
     // Apply orientation
     if (orientation === 'landscape') {
@@ -295,6 +283,14 @@ export const useEditorStore = defineStore('editor', () => {
     zoomLevel.value = Math.max(Math.min(level, 3.0), 0.2);
   }
 
+  function getPosterDimensions(format: PosterFormat) {
+    if (format === 'A4 Landscape') return { width: 297, height: 210 };
+    if (format === 'Flyer') return { width: 100, height: 210 };
+    if (format === 'A3') return { width: 297, height: 420 };
+    if (format === 'A2') return { width: 420, height: 594 };
+    return { width: 210, height: 297 };
+  }
+
   return {
     activePoster,
     activePage,
@@ -314,6 +310,7 @@ export const useEditorStore = defineStore('editor', () => {
     updatePoster,
     selectElement,
     deleteElement,
+    reorderElementsByIds,
     moveElementUp,
     moveElementDown,
     alignElement,

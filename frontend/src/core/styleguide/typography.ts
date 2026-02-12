@@ -1,6 +1,6 @@
 export const typography = {
   fontFamily: {
-    headings: '"Roboto Slab", serif',
+    headings: '"PT Sans", sans-serif',
     body: '"PT Sans", sans-serif',
   },
   weights: {
