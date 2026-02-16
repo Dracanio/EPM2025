@@ -1,12 +1,9 @@
 package com.example.epm2025.configs
 
-import org.apache.catalina.webresources.TomcatURLStreamHandlerFactory.disable
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
-import org.springframework.http.HttpMethod
 import org.springframework.security.authentication.AuthenticationProvider
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider
-import org.springframework.security.config.Customizer
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.core.userdetails.User
@@ -25,18 +22,20 @@ class SecurityConfig {
     fun filterChain(http: HttpSecurity): SecurityFilterChain {
         http
             .csrf { it.disable() }
-            .headers { it.disable() }
+            .headers { it.frameOptions { frame -> frame.disable() } }
             .authorizeHttpRequests {
-                it.requestMatchers("/login", "/register", "/h2-console/**").permitAll()
-                it.requestMatchers(HttpMethod.POST, "/users").permitAll()
+                it.requestMatchers(
+                    "/h2-console/**",
+                    "/",
+                    "/api/auth/**",
+                    "/assets/**",
+                    "/index.html",
+                    "/login"
+                ).permitAll()
                 it.anyRequest().authenticated()
             }
-            .formLogin {
-                it.loginPage("/login")
-                    .defaultSuccessUrl("/index.html", true)
-                    .permitAll()
-            }
-            .httpBasic(Customizer.withDefaults())
+            .formLogin {it.disable()}
+            .httpBasic{it.disable()}
 
         return http.build()
     }
