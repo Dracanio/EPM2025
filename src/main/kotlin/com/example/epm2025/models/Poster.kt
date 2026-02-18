@@ -2,7 +2,6 @@ package com.example.epm2025.models
 
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Entity
-import jakarta.persistence.FetchType
 import jakarta.persistence.Id
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToMany
@@ -12,10 +11,10 @@ import java.util.UUID
 @Entity
 class Poster {
     @Id
-    open val id : UUID = UUID.randomUUID()
+    val id : UUID = UUID.randomUUID()
     var name: String = ""
-    var width: Int = 0
-    var height: Int = 0
+    var width: Float = 0F
+    var height: Float = 0F
     var status: PosterStatus = PosterStatus.DRAFT
     val createdAt: LocalDateTime = LocalDateTime.now()
     var updatedAt: LocalDateTime = LocalDateTime.now()
@@ -25,4 +24,19 @@ class Poster {
     var project: Project? = null
     @OneToMany(mappedBy = "poster", cascade = [CascadeType.ALL], orphanRemoval = true)
     val elements: MutableList<Element> = mutableListOf()
+
+    fun addElement(element: Element) {
+        elements.add(element)
+        element.poster = this
+    }
+
+    fun removeElement(element: Element) {
+        elements.remove(element)
+        element.poster = null!!
+    }
+
+    fun clearElements() {
+        elements.forEach { it.poster = null!! }
+        elements.clear()
+    }
 }

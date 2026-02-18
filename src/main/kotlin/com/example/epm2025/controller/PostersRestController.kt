@@ -1,6 +1,7 @@
 package com.example.epm2025.controller
 
 import com.example.epm2025.dtos.PosterDto
+import com.example.epm2025.dtos.UpdatePosterDto
 import com.example.epm2025.services.PostersService
 import com.example.epm2025.models.Poster
 import com.example.epm2025.models.Role
@@ -26,6 +27,21 @@ class PosterController(private val postersService: PostersService, private val u
         poster.width = posterDto.width
         poster.name = posterDto.name
         poster.owner = currentUser
+        return postersService.savePoster(poster)
+    }
+
+    @PutMapping("/posters/{id}")
+    fun updatePoster(@PathVariable id: UUID, @Valid @RequestBody dto: UpdatePosterDto, @AuthenticationPrincipal principal: UserPrincipal): Poster {
+        val poster = postersService.getPosterById(id)
+            ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+        val currentUser = usersService.findByEmail(principal.username)
+        if (poster.owner?.id != currentUser.id && currentUser.role != Role.ADMIN) {
+            throw ResponseStatusException(HttpStatus.FORBIDDEN)
+        }
+        poster.name = dto.name
+        poster.width = dto.width
+        poster.height = dto.height
+
         return postersService.savePoster(poster)
     }
 
