@@ -19,8 +19,10 @@ class Poster {
     var status: PosterStatus = PosterStatus.DRAFT
     val createdAt: LocalDateTime = LocalDateTime.now()
     var updatedAt: LocalDateTime = LocalDateTime.now()
-    @ManyToOne(fetch = FetchType.LAZY)
-    lateinit var project: Project
+    @ManyToOne
+    var owner: User? = null
+    @ManyToOne
+    var project: Project? = null
     @OneToMany(mappedBy = "poster", cascade = [CascadeType.ALL], orphanRemoval = true)
     val elements: MutableList<Element> = mutableListOf()
 }

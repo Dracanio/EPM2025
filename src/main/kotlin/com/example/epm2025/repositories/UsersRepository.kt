@@ -8,4 +8,5 @@ import java.util.*
 @Repository
 interface UsersRepository : CrudRepository<User, UUID> {
     fun findByEmail(email: String): User?
+    fun existsByEmail(email: String): Boolean
 }

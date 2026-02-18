@@ -7,15 +7,13 @@ import java.util.Collections
 
 class UserPrincipal (private val user: User) : UserDetails {
     override fun getAuthorities(): MutableCollection<out GrantedAuthority> {
-        if(user.role == Role.STUDENT){
-            return  Collections.singleton(SimpleGrantedAuthority("STUDENT"))
-        }else if(user.role == Role.ADMIN){
-            return  Collections.singleton(SimpleGrantedAuthority("ADMIN"))
-        }else if(user.role == Role.LECTURER){
-            return  Collections.singleton(SimpleGrantedAuthority("LECTURER"))
-        }else{
-            return  Collections.singleton(SimpleGrantedAuthority("USER"))
+        val roleName = when (user.role) {
+            Role.STUDENT -> "ROLE_STUDENT"
+            Role.ADMIN -> "ROLE_ADMIN"
+            Role.LECTURER -> "ROLE_LECTURER"
+            else -> "ROLE_USER"
         }
+        return Collections.singleton(SimpleGrantedAuthority(roleName))
     }
 
     override fun getPassword(): String {
@@ -25,4 +23,6 @@ class UserPrincipal (private val user: User) : UserDetails {
     override fun getUsername(): String {
         return user.email
     }
+    fun getUser(): User = user
+
 }
