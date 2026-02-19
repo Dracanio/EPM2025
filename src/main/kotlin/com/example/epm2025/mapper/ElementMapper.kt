@@ -11,7 +11,7 @@ class ElementMapper(
     private val assetRepository: AssetRepository
 ) {
 
-    fun toEntity(dto: ElementDto, poster: Poster): Element {
+    fun toElement(dto: ElementDto, poster: Poster): Element {
         return when (dto) {
 
             is TextElementDto -> TextElement().apply {
@@ -44,34 +44,54 @@ class ElementMapper(
         }
     }
 
-    fun toDto(entity: Element): ElementDto {
-        return when (entity) {
+    fun toDto(element: Element): ElementDto {
+        return when (element) {
 
             is TextElement -> TextElementDto(
-                id = entity.id,
-                x = entity.x,
-                y = entity.y,
-                width = entity.width,
-                height = entity.height,
-                rotation = entity.rotation,
-                text = entity.text,
-                font = entity.font,
-                fontSize = entity.fontSize,
-                color = entity.color,
-                alignment = entity.alignment
+                id = element.id,
+                x = element.x,
+                y = element.y,
+                width = element.width,
+                height = element.height,
+                rotation = element.rotation,
+                text = element.text,
+                font = element.font,
+                fontSize = element.fontSize,
+                color = element.color,
+                alignment = element.alignment
             )
 
             is ImageElement -> ImageElementDto(
-                id = entity.id,
-                x = entity.x,
-                y = entity.y,
-                width = entity.width,
-                height = entity.height,
-                rotation = entity.rotation,
-                assetId = entity.asset.id
+                id = element.id,
+                x = element.x,
+                y = element.y,
+                width = element.width,
+                height = element.height,
+                rotation = element.rotation,
+                assetId = element.asset.id
             )
 
             else -> throw IllegalArgumentException("Unknown element type")
+        }
+    }
+    fun updateElement(target: Element, source: Element) {
+        target.x = source.x
+        target.y = source.y
+        target.width = source.width
+        target.height = source.height
+        target.rotation = source.rotation
+
+        when {
+            target is TextElement && source is TextElement -> {
+                target.text = source.text
+                target.font = source.font
+                target.fontSize = source.fontSize
+                target.color = source.color
+                target.alignment = source.alignment
+            }
+            target is ImageElement && source is ImageElement -> {
+                target.asset = source.asset
+            }
         }
     }
 }

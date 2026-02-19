@@ -32,11 +32,11 @@ class Poster {
 
     fun removeElement(element: Element) {
         elements.remove(element)
-        element.poster = null!!
+        element.poster = null
     }
 
     fun clearElements() {
-        elements.forEach { it.poster = null!! }
+        elements.forEach { it.poster = null }
         elements.clear()
     }
 }

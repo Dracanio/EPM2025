@@ -1,6 +1,7 @@
 package com.example.epm2025.services
 
 import com.example.epm2025.models.Poster
+import com.example.epm2025.models.User
 import com.example.epm2025.repositories.PostersRepository
 import org.springframework.data.repository.findByIdOrNull
 import java.util.UUID
@@ -26,5 +27,9 @@ class PostersServiceImpl( private val postersRepository: PostersRepository) : Po
 
     override fun deletePoster(poster: Poster) {
         postersRepository.delete(poster)
+    }
+
+    override fun getByOwner(user: User): List<Poster> {
+        return postersRepository.getPostersByOwner(user)
     }
 }

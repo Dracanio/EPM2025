@@ -5,8 +5,8 @@ import jakarta.persistence.FetchType
 import jakarta.persistence.ManyToOne
 
 @Entity
-class ImageElement : Element() {
+open class ImageElement : Element() {
 
     @ManyToOne(fetch = FetchType.LAZY)
-    lateinit var asset: Asset
+    open lateinit var asset: Asset
 }

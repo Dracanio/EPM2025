@@ -3,11 +3,11 @@ package com.example.epm2025.models
 import jakarta.persistence.Entity
 
 @Entity
-class TextElement : Element() {
+open class TextElement : Element() {
 
-    var text: String = ""
-    var font: String = ""
-    var fontSize: Int = 12
-    var color: String = "#000000"
-    var alignment: String = "LEFT"
+    open var text: String = ""
+    open var font: String = ""
+    open var fontSize: Int = 12
+    open var color: String = "#000000"
+    open var alignment: String = "LEFT"
 }

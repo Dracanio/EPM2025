@@ -5,7 +5,6 @@ import com.example.epm2025.mapper.ElementMapper
 import com.example.epm2025.services.ElementsService
 import com.example.epm2025.models.Element
 import com.example.epm2025.services.PostersService
-import jakarta.validation.Valid
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
@@ -33,7 +32,7 @@ class ElementController(private val elementsService: ElementsService, private va
         val poster = postersService.getPosterById(posterId)
             ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
 
-        val element = elementMapper.toEntity(dto, poster)
+        val element = elementMapper.toElement(dto, poster)
 
         poster.addElement(element)
         elementsService.saveElement(element)

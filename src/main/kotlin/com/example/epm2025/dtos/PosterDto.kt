@@ -1,5 +1,6 @@
 package com.example.epm2025.dtos
 
+import com.example.epm2025.models.PosterStatus
 import java.util.UUID
 
 class PosterDto(
@@ -7,11 +8,7 @@ class PosterDto(
     val name: String,
     val height: Float,
     val width: Float,
-    val elements: List<ElementDto>
+    val status: PosterStatus = PosterStatus.DRAFT,
+    val elements: List<ElementDto> = emptyList()
 )
 
-data class UpdatePosterDto(
-    val name: String,
-    val width: Float,
-    val height: Float
-)

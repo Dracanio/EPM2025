@@ -1,5 +1,6 @@
 package com.example.epm2025.models
 
+import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
 import jakarta.persistence.Entity
@@ -25,12 +26,13 @@ import java.util.UUID
 abstract class Element {
     @Id
     open var id : UUID = UUID.randomUUID()
-    var x: Float = 0f
-    var y: Float = 0f
-    var width: Float = 0f
-    var height: Float = 0f
-    var rotation: Float = 0f
+    open var x: Float = 0f
+    open var y: Float = 0f
+    open var width: Float = 0f
+    open var height: Float = 0f
+    open var rotation: Float = 0f
 
     @ManyToOne(fetch = FetchType.LAZY)
-    var poster: Poster? = null
+    @JsonIgnore
+    open var poster: Poster? = null
 }
