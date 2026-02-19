@@ -3,6 +3,7 @@ package com.example.epm2025.models
 import com.fasterxml.jackson.annotation.JsonIgnore
 import com.fasterxml.jackson.annotation.JsonSubTypes
 import com.fasterxml.jackson.annotation.JsonTypeInfo
+import jakarta.persistence.DiscriminatorColumn
 import jakarta.persistence.Entity
 import jakarta.persistence.FetchType
 import jakarta.persistence.GeneratedValue
@@ -13,7 +14,7 @@ import jakarta.persistence.ManyToOne
 import java.util.UUID
 
 @Entity
-@Inheritance(strategy = InheritanceType.JOINED)
+@Inheritance(strategy = InheritanceType.SINGLE_TABLE)
 @JsonTypeInfo(
     use = JsonTypeInfo.Id.NAME,
     include = JsonTypeInfo.As.PROPERTY,
@@ -23,6 +24,7 @@ import java.util.UUID
     JsonSubTypes.Type(value = TextElement::class, name = "TEXT"),
     JsonSubTypes.Type(value = ImageElement::class, name = "IMAGE")
 )
+@DiscriminatorColumn(name = "dtype")
 abstract class Element {
     @Id
     open var id : UUID = UUID.randomUUID()

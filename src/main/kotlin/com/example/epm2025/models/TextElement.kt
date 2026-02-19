@@ -1,8 +1,10 @@
 package com.example.epm2025.models
 
+import jakarta.persistence.DiscriminatorValue
 import jakarta.persistence.Entity
 
 @Entity
+@DiscriminatorValue("TEXT")
 open class TextElement : Element() {
 
     open var text: String = ""
