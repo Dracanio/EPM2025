@@ -10,7 +10,6 @@ import com.example.epm2025.repositories.UsersRepository
 import org.springframework.http.ResponseEntity
 import org.springframework.security.authentication.AuthenticationProvider
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
-import org.springframework.security.crypto.password.PasswordEncoder
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
@@ -21,7 +20,6 @@ import org.springframework.web.bind.annotation.RestController
 class AuthController(
     private val authenticationProvider: AuthenticationProvider,
     private val userRepository: UsersRepository,
-    private val passwordEncoder: PasswordEncoder
 ) {
 
     @PostMapping("/login")
@@ -56,7 +54,7 @@ class AuthController(
         user.firstName = request.firstName
         user.lastName = request.lastName
         user.passwordHash = request.password
-        user.role = Role.STUDENT   // Default-Rolle
+        user.role = Role.STUDENT
 
 
         val savedUser = userRepository.save(user)
