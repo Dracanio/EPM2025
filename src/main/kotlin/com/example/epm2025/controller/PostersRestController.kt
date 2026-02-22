@@ -82,7 +82,7 @@ class PosterController(private val postersService: PostersService, private val u
         }
         postersService.deletePoster(poster)
     }
-    @PostMapping("/projects/{id}/invite")
+    @PostMapping("/posters/{id}/invite")
     fun inviteUser(@PathVariable id: UUID, @RequestParam email: String, @AuthenticationPrincipal principal: UserPrincipal) {
         val poster = postersService.getPosterById(id) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
 
