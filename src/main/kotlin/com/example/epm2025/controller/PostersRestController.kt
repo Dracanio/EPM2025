@@ -82,4 +82,20 @@ class PosterController(private val postersService: PostersService, private val u
         }
         postersService.deletePoster(poster)
     }
+    @PostMapping("/projects/{id}/invite")
+    fun inviteUser(@PathVariable id: UUID, @RequestParam email: String, @AuthenticationPrincipal principal: UserPrincipal) {
+        val poster = postersService.getPosterById(id) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
+
+        val currentUser = usersService.findByEmail(principal.username)
+
+        if (poster.owner?.id != currentUser.id) {
+            throw ResponseStatusException(HttpStatus.FORBIDDEN)
+        }
+
+        val invitedUser = usersService.findByEmail(email)
+        poster.collaborators.add(invitedUser)
+
+        postersService.savePoster(poster)
+    }
+
 }

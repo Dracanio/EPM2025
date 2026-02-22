@@ -49,11 +49,7 @@ class ProjectController( private val projectsService: ProjectsService, private v
         projectsService.deleteProject(project!!)
     }
     @PostMapping("/projects/{id}/invite")
-    fun inviteUser(
-        @PathVariable id: UUID,
-        @RequestParam email: String,
-        @AuthenticationPrincipal principal: UserPrincipal
-    ) {
+    fun inviteUser(@PathVariable id: UUID, @RequestParam email: String, @AuthenticationPrincipal principal: UserPrincipal) {
         val project = projectsService.getProjectById(id) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND)
 
         val currentUser = usersService.findByEmail(principal.username)

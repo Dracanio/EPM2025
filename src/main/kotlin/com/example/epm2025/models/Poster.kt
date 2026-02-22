@@ -3,6 +3,7 @@ package com.example.epm2025.models
 import jakarta.persistence.CascadeType
 import jakarta.persistence.Entity
 import jakarta.persistence.Id
+import jakarta.persistence.ManyToMany
 import jakarta.persistence.ManyToOne
 import jakarta.persistence.OneToMany
 import java.time.LocalDateTime
@@ -24,6 +25,8 @@ class Poster {
     var project: Project? = null
     @OneToMany(mappedBy = "poster", cascade = [CascadeType.ALL], orphanRemoval = true)
     val elements: MutableList<Element> = mutableListOf()
+    @ManyToMany
+    var collaborators: MutableSet<User> = mutableSetOf()
 
     fun addElement(element: Element) {
         elements.add(element)

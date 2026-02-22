@@ -6,7 +6,7 @@ import com.example.epm2025.dtos.RegisterRequest
 import com.example.epm2025.models.Role
 import com.example.epm2025.models.User
 import com.example.epm2025.models.UserPrincipal
-import com.example.epm2025.repositories.UsersRepository
+import com.example.epm2025.services.UsersService
 import org.springframework.http.ResponseEntity
 import org.springframework.security.authentication.AuthenticationProvider
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken
@@ -17,10 +17,7 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/api/v1")
-class AuthController(
-    private val authenticationProvider: AuthenticationProvider,
-    private val userRepository: UsersRepository,
-) {
+class AuthController(private val authenticationProvider: AuthenticationProvider, private val usersService: UsersService) {
 
     @PostMapping("/login")
     fun login(@RequestBody request: LoginRequest): ResponseEntity<LoginResponse> {
@@ -57,7 +54,7 @@ class AuthController(
         user.role = Role.STUDENT
 
 
-        val savedUser = userRepository.save(user)
+        val savedUser = usersService.saveUser(user)
 
         return ResponseEntity.ok(
             LoginResponse(

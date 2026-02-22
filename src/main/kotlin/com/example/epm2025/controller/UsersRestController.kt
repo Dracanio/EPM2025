@@ -30,7 +30,6 @@ class UsersRestController (private val usersService: UsersService) {
 
     @GetMapping("/users")
     fun getUsers(): List<User> {
-        //val user = principal.username
         return usersService.getAllUsers()
     }
 
@@ -62,7 +61,7 @@ class UsersRestController (private val usersService: UsersService) {
 
     @DeleteMapping("/users/{id}")
     fun deleteUser(@PathVariable("id") id: UUID) {
-        var user = usersService.getUserById(id)
+        val user = usersService.getUserById(id)
         if (user != null) {
             usersService.deleteUser(user)
         } else {

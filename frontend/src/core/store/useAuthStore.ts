@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import type { ShareLinkRole } from '@/core/models/accessControl'
+import { authService } from '@/core/api/authService'
 
 type SessionMode = 'anonymous' | 'authenticated' | 'guest' | 'link'
 
@@ -111,32 +112,49 @@ export const useAuthStore = defineStore('auth', () => {
   async function login(email: string, password?: string) {
     if (!email || !password) return Promise.reject(new Error('Email and password are required'))
 
-    token.value = 'mock-jwt-token-' + Date.now()
-    user.value = {
-      id: 'u-' + Math.round(Math.random() * 100000).toString(),
-      name: email.split('@')[0] || 'Poster User',
-      email,
-      role: 'editor'
+    try {
+      const res = await authService.login(email, password)
+
+      user.value = {
+        id: res.id,
+        name: `${res.firstName} ${res.lastName}`,
+        email: res.email,
+        role: 'editor'
+      }
+
+      token.value = null // kein JWT aktuell
+      sessionMode.value = 'authenticated'
+      linkSession.value = null
+      persist()
+    } catch (e) {
+      throw new Error('Login fehlgeschlagen')
     }
-    sessionMode.value = 'authenticated'
-    linkSession.value = null
-    persist()
-    return Promise.resolve()
   }
 
   async function register(name: string, email: string, password: string) {
     if (!name || !email || !password) return Promise.reject(new Error('Missing registration fields'))
-    token.value = 'mock-jwt-token-' + Date.now()
-    user.value = {
-      id: 'u-' + Math.round(Math.random() * 100000).toString(),
-      name,
-      email,
-      role: 'editor'
+
+    const parts = name.trim().split(' ')
+    const firstName = parts[0]!
+    const lastName = parts.slice(1).join(' ') || '-'
+
+    try {
+      const res = await authService.register(firstName, lastName, email, password)
+
+      user.value = {
+        id: res.id,
+        name: `${res.firstName} ${res.lastName}`,
+        email: res.email,
+        role: 'editor'
+      }
+
+      token.value = null
+      sessionMode.value = 'authenticated'
+      linkSession.value = null
+      persist()
+    } catch (e) {
+      throw new Error('Registrierung fehlgeschlagen')
     }
-    sessionMode.value = 'authenticated'
-    linkSession.value = null
-    persist()
-    return Promise.resolve()
   }
 
   function updateProfile(partial: Partial<Pick<User, 'name' | 'email' | 'avatarUrl'>>) {
